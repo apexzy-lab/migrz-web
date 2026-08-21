@@ -18,7 +18,7 @@ export function Logo({ light = true }: { light?: boolean }) {
 }
 
 export function SiteHeader() {
-  return <header className="header"><div className="header-inner"><Logo/>
+  return <header className="header"><a className="mobile-signal" href="/process"><span>Assessment first.</span> Get a written route report in 48 hours <Arrow/></a><div className="header-inner"><Logo/>
     <nav className="desktop-nav" aria-label="Primary navigation">
       <div className="nav-group"><a href="/#pathways">Pathways</a><div className="mega-menu"><div><span>United States</span><a href="/us/eb-1a">EB-1A</a><a href="/us/niw">National Interest Waiver</a><span>United Kingdom</span><a href="/uk/global-talent-visa">Global Talent Visa</a><a href="/uk/innovator-founder-visa">Innovator Founder</a></div><div><span>Canada</span><a href="/ca/canada-immigration">Canada overview</a><a href="/ca/express-entry">Express Entry</a><a href="/ca/provincial-nominee-program">Provincial Nominee</a><span>More destinations</span><a href="/au/australia-global-talent">Australia</a><a href="/eu/de/germany-eu-blue-card">Germany</a><a href="/uae/dubai-golden-visa">Dubai</a></div></div></div>
       <a href="/process">Process</a><a href="/98-success-rate">Results</a><a href="/customers">Who we help</a>
@@ -125,6 +125,6 @@ export function CustomersPage(){ const groups=[["Technology","Software engineers
 
 export function FAQPage(){ return <><PageHero eyebrow="FAQ center" title="Clear answers before a consequential decision." text="Start with what Migrz does, what it does not do, and what you should expect from the assessment."/><section className="faq-section">{faqGroups.map(group=><div className="faq-group" key={group.title}><h2>{group.title}</h2><div>{group.items.map(item=><details key={item[0]}><summary>{item[0]}<span>+</span></summary><p>{item[1]}</p></details>)}</div></div>)}</section><CTA title="Still deciding? Start with the assessment scope."/></> }
 
-function PageHero({eyebrow,title,text}:{eyebrow:string;title:string;text:string}){return <section className="page-hero"><div><span className="eyebrow light">{eyebrow}</span><h1>{title}</h1><p>{text}</p><a className="btn-accent" href={ASSESSMENT_URL}>Start professional assessment <Arrow/></a></div><div className="hero-monogram"><span>M</span><small>MERIT<br/>MOBILITY<br/>MIGRZ</small></div></section>}
+function PageHero({eyebrow,title,text}:{eyebrow:string;title:string;text:string}){return <section className="page-hero"><div><span className="eyebrow light">{eyebrow}</span><h1>{title}</h1><p>{text}</p><a className="btn-accent" href={ASSESSMENT_URL}>Start professional assessment <Arrow/></a></div><div className="hero-route-mark" aria-hidden="true"><span>Merit in motion</span><strong>M</strong><div className="route-axis"><i/><i/><i/></div><div className="route-legend"><b>Work</b><b>Evidence</b><b>Mobility</b></div><small>MIGRZ / SINCE 2019 / ACROSS BORDERS</small></div></section>}
 
 export function ContentPage({slug}:{slug:string}){ if(slug==="about")return <AboutPage/>; if(slug==="what-makes-us-different")return <DifferencePage/>; if(slug==="process")return <ProcessPage/>; if(slug==="98-success-rate")return <ResultsPage/>; if(slug==="customers")return <CustomersPage/>; if(slug==="faqs")return <FAQPage/>; return null; }

@@ -232,3 +232,53 @@ a:hover>.brand-arrow{transform:translateX(3px)}
   .results-grid>div{min-height:110px}
   .footer-grid{grid-template-columns:1fr}
 }
+
+/* A distinct Migrz hero language: careers translated into movement */
+.mobile-signal{display:none}
+.home-hero{position:relative;overflow:hidden;grid-template-columns:minmax(0,1.35fr) minmax(360px,.65fr);background:#fff;color:#050505}
+.home-hero:before{content:"M";position:absolute;z-index:0;right:25%;bottom:-155px;color:transparent;-webkit-text-stroke:1px #e2e2e2;font:500 560px/1 var(--serif);transform:rotate(-7deg);pointer-events:none}
+.home-hero>div,.home-hero>aside{position:relative;z-index:1}
+.home-hero .eyebrow.light{color:#555}
+.home-hero h1 em{color:#050505;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.12em}
+.home-hero .hero-copy>p{color:#454545}
+.home-hero .btn-accent{background:#050505;color:#fff;border-color:#050505}
+.home-hero .btn-accent .brand-arrow{background:#fff;color:#050505;border-color:#fff}
+.home-hero .link-light{color:#050505;border-color:#777}
+.home-hero .hero-checks{color:#666}
+.home-hero .hero-checks span:before{color:#050505}
+.home-hero .human-review{min-height:560px;background:#050505;border:0;color:#fff;box-shadow:18px 18px 0 #ededed}
+.home-hero .human-review:before{-webkit-text-stroke-color:#343434}
+
+.hero-route-mark{justify-self:end;width:min(470px,100%);height:430px;position:relative;overflow:hidden;border-left:1px solid #4a4a4a;padding:20px 0 20px 44px}
+.hero-route-mark>span{position:absolute;top:18px;right:0;font:10px var(--font-mono);letter-spacing:.18em;text-transform:uppercase;color:#aaa}
+.hero-route-mark>strong{position:absolute;left:25px;top:15px;color:transparent;-webkit-text-stroke:1px #6a6a6a;font:430 330px/.95 var(--serif);transform:rotate(-7deg)}
+.route-axis{position:absolute;left:45px;right:0;bottom:94px;height:1px;background:#777;display:flex;justify-content:space-between;align-items:center}
+.route-axis i{width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#050505}
+.route-axis i:last-child{background:#fff}
+.route-legend{position:absolute;left:45px;right:0;bottom:58px;display:flex;justify-content:space-between}
+.route-legend b{font:9px var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+.hero-route-mark>small{position:absolute;left:45px;bottom:10px;color:#888;font:8px var(--font-mono);letter-spacing:.13em}
+
+@media(max-width:1000px){
+  .hero-route-mark{justify-self:start;margin-top:50px;width:min(600px,100%)}
+}
+@media(max-width:640px){
+  .mobile-signal{min-height:44px;padding:9px 6%;display:flex;align-items:center;justify-content:center;gap:5px;text-align:center;background:#fff;color:#050505;border-bottom:1px solid #d7d7d7;font-size:11px;line-height:1.35}
+  .mobile-signal span{font-weight:750}
+  .mobile-signal .brand-arrow{width:22px;height:22px;font-size:13px;margin-left:3px}
+  .mobile-panel{inset:116px 0 0}
+  .home-hero{display:block;min-height:calc(100svh - 116px);padding:60px 6% 54px;background:#fff;color:#050505}
+  .home-hero:before{right:-110px;bottom:-70px;font-size:330px;-webkit-text-stroke-color:#e7e7e7}
+  .home-hero h1{margin:24px 0;font-size:clamp(47px,13.5vw,58px);line-height:.96;letter-spacing:-.065em}
+  .home-hero .hero-copy>p{font-size:16px;line-height:1.6}
+  .home-hero .hero-actions{margin-top:28px;gap:18px}
+  .home-hero .hero-checks{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:44px;font-size:8px;line-height:1.45}
+  .home-hero .human-review{display:none}
+  .hero-route-mark{display:none}
+}
+@media(max-width:360px){
+  .mobile-panel{inset:116px 0 0}
+  .home-hero{padding-top:48px}
+  .home-hero h1{font-size:44px}
+  .home-hero .hero-checks{grid-template-columns:1fr}
+}
