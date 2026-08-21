@@ -12,7 +12,7 @@ export const metadata:Metadata={
   metadataBase:new URL(SITE_URL), title:{default:"Migrz | Achievement-Based Immigration Strategy",template:"%s | Migrz"},
   description:"Evidence-led immigration strategy for exceptional professionals.",
   icons:{icon:"/favicon.png",apple:"/apple-touch-icon.png"},
-  openGraph:{type:"website",siteName:"Migrz",images:[{url:"/og.png",width:1732,height:909,alt:"Migrz — Your achievements are a passport"}]},
+  openGraph:{type:"website",siteName:"Migrz",images:[{url:"/og.png",width:1732,height:909,alt:"Migrz — Your work has crossed borders. Your life should too."}]},
   twitter:{card:"summary_large_image",images:["/og.png"]},
 };
 
