@@ -198,3 +198,37 @@ a:hover>.brand-arrow{transform:translateX(3px)}
   .comparison-table>div>span{font:10px var(--font-mono);text-transform:uppercase}
   .results-stories article{min-height:340px}
 }
+
+/* Shared interaction and mobile usability safeguards */
+:focus-visible{outline:2px solid currentColor;outline-offset:4px}
+.brand-logo{min-height:44px;display:flex;align-items:center}
+@media(max-width:1000px){
+  body:has(.mobile-menu[open]){overflow:hidden}
+  .mobile-menu summary{width:44px;height:44px}
+  .mobile-menu summary i{transform-origin:center;transition:transform .2s}
+  .mobile-menu[open] summary i:first-of-type{transform:translateY(4px) rotate(45deg)}
+  .mobile-menu[open] summary i:last-of-type{transform:translateY(-4px) rotate(-45deg)}
+  .mobile-panel{overscroll-behavior:contain;padding-bottom:max(38px,env(safe-area-inset-bottom))}
+  .mobile-panel>a,.mobile-pathways a{min-height:44px;display:flex;align-items:center}
+  .mobile-pathways{display:grid;grid-template-columns:1fr 1fr;column-gap:20px}
+  .mobile-pathways a{min-width:0}
+}
+@media(max-width:640px){
+  .page-hero h1{font-size:clamp(44px,13vw,53px);letter-spacing:-.06em}
+  .intro-section h2,.definition h2,.story h2,.results-explain h2,.section-head h2,.method-copy h2,.audience-section h2,.framework-title h2,.process-teaser h2,.specialization h2,.comparison-head h2,.cta-section h2,.difference-intro h2,.process-overview h2,.results-lead h2,.case-example h2,.process-guardrails h2,.results-definition h2,.results-comparison h2,.results-ethics h2{font-size:clamp(36px,10.5vw,42px)}
+  .page-hero .btn-accent,.hero-actions .btn-accent{width:100%;min-height:56px}
+  .mobile-panel{padding-top:18px}
+  .mobile-panel strong{margin-top:17px}
+  .mobile-pathways a{font-size:12px}
+  .process-detailed header{grid-template-columns:1fr;gap:18px}
+  .process-body{margin:32px 0 0}
+  .difference-stack>article{grid-template-columns:1fr;gap:16px}
+  .specialization a{min-height:58px;grid-template-columns:84px minmax(0,1fr) auto;gap:10px;align-items:center}
+  .footer-grid{gap:24px 28px}
+  .footer-grid a,.footer-lead>a{min-height:44px;display:flex;align-items:center}
+}
+@media(max-width:360px){
+  .results-grid{grid-template-columns:1fr}
+  .results-grid>div{min-height:110px}
+  .footer-grid{grid-template-columns:1fr}
+}

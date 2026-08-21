@@ -25,7 +25,7 @@ export function SiteHeader() {
       <div className="nav-group"><a href="/about">About</a><div className="mini-menu"><a href="/about">Our story</a><a href="/what-makes-us-different">What makes us different</a><a href="/faqs">FAQs</a><a href="https://blog.migrzz.com">Insights</a></div></div>
     </nav>
     <a className="header-cta" href={ASSESSMENT_URL}>Start assessment <Arrow/></a>
-    <details className="mobile-menu"><summary aria-label="Open menu"><i/><i/></summary><div className="mobile-panel"><a href="/">Home</a><strong>Pathways</strong>{pathways.map(p=><a key={p.slug} href={`/${p.slug}`}>{p.country} · {p.code}</a>)}<strong>Company</strong><a href="/process">Process</a><a href="/98-success-rate">Results</a><a href="/customers">Who we help</a><a href="/about">About</a><a href="/what-makes-us-different">What makes us different</a><a href="/faqs">FAQs</a><a className="mobile-cta" href={ASSESSMENT_URL}>Start assessment <Arrow/></a></div></details>
+    <details className="mobile-menu"><summary aria-label="Menu"><i/><i/></summary><div className="mobile-panel"><a href="/">Home</a><strong>Pathways</strong><div className="mobile-pathways">{pathways.map(p=><a key={p.slug} href={`/${p.slug}`}>{p.country} · {p.code}</a>)}</div><strong>Company</strong><a href="/process">Process</a><a href="/98-success-rate">Results</a><a href="/customers">Who we help</a><a href="/about">About</a><a href="/what-makes-us-different">What makes us different</a><a href="/faqs">FAQs</a><a className="mobile-cta" href={ASSESSMENT_URL}>Start assessment <Arrow/></a></div></details>
   </div></header>;
 }
 
