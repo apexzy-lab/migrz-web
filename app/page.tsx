@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { DesignLab } from "./design-lab";
+import { HomePage } from "./site-components";
 
 export const metadata: Metadata = {
-  title: "Migrz — Six UI Directions",
-  description:
-    "Six research-led website directions for Migrz, the achievement-based immigration strategy service.",
+  title: "Migrz | Achievement-Based Immigration Strategy",
+  description: "Compare achievement-based permanent-residency pathways across the US, UK, Canada, Australia, Germany, and the UAE.",
+  alternates: { canonical: "/" },
 };
 
-export default function Home() {
-  return <DesignLab />;
-}
+export default function Page(){ return <HomePage/>; }

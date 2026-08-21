@@ -2,30 +2,17 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const root = new URL("../", import.meta.url);
+const routes=["/","/what-makes-us-different/","/eu/de/germany-eu-blue-card","/au/australia-global-talent","/uae/dubai-golden-visa","/ca/express-entry","/ca/provincial-nominee-program","/ca/canada-immigration","/uk/innovator-founder-visa","/uk/global-talent-visa","/us/niw","/us/eb-1a","/process/","/98-success-rate/","/customers/","/faqs/","/about/"];
 
-async function render(path = "/") {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-  return worker.fetch(new Request(`http://localhost${path}`, { headers: { accept: "text/html", host: "localhost" } }), { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
-}
+async function worker(){const workerUrl=new URL("../dist/server/index.js",import.meta.url);workerUrl.searchParams.set("test",`${process.pid}-${Date.now()}-${Math.random()}`);return(await import(workerUrl.href)).default;}
+async function fetchRoute(path){const w=await worker();const env={ASSETS:{fetch:async()=>new Response("Not found",{status:404})}};const ctx={waitUntil(){},passThroughOnException(){}};const request=new Request(`https://migrzz.com${path}`,{headers:{accept:"text/html",host:"migrzz.com","x-forwarded-host":"migrzz.com","x-forwarded-proto":"https"}});let response=await w.fetch(request,env,ctx);if([307,308].includes(response.status)){const location=response.headers.get("location");response=await w.fetch(new Request(new URL(location,request.url),request),env,ctx);}return response;}
 
-test("renders the Migrz design lab", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  assert.match(html, /Migrz — Six UI Directions/);
-  assert.match(html, /Six directions for Migrz/);
-  assert.match(html, /Your achievements/);
-  assert.match(html, /The Merit Index/);
-  assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/);
-});
+test("renders every canonical Migrz page",async()=>{for(const route of routes){const response=await fetchRoute(route);assert.equal(response.status,200,route);const html=await response.text();assert.match(html,/<title>.+Migrz/i,route);assert.match(html,/Start assessment|Start professional assessment|Start your/i,route);assert.match(html,/migrz-logo\.png/i,route);assert.doesNotMatch(html,/codex-preview|react-loading-skeleton|UI DESIGN LAB/i,route);}});
 
-test("contains all six distinct concepts and research-led content", async () => {
-  const source = await readFile(new URL("app/design-lab.tsx", root), "utf8");
-  for (const id of ["merit", "atlas", "signal", "dossier", "northstar", "quiet"]) assert.match(source, new RegExp(`\\"${id}\\"`));
-  for (const term of ["EB-1A", "NIW", "Global Talent", "48 hours", "six countries"]) assert.match(source, new RegExp(term, "i"));
-  assert.match(source, /ArrowRight/);
-  assert.match(source, /aria-pressed/);
-});
+test("homepage renders the selected Merit Index direction",async()=>{const response=await fetchRoute("/");const html=await response.text();assert.match(html,/Your achievements/);assert.match(html,/The Merit Index/);assert.match(html,/Your strongest pathways/);assert.match(html,/Strategy before paperwork/);});
+
+test("pathway pages use current programs and official guidance",async()=>{const au=await(await fetchRoute("/au/australia-global-talent/")).text();assert.match(au,/National Innovation Visa/);assert.match(au,/replaced the former Global Talent/i);const ca=await(await fetchRoute("/ca/provincial-nominee-program/")).text();assert.match(ca,/600 additional CRS points/);const uae=await(await fetchRoute("/uae/dubai-golden-visa/")).text();assert.match(uae,/Official UAE Golden visa guidance/);});
+
+test("crawler assets cover all canonical pages",async()=>{const sitemap=await fetchRoute("/sitemap.xml");assert.equal(sitemap.status,200);const xml=await sitemap.text();for(const route of routes)assert.match(xml,new RegExp(`https://migrzz\\.com${route.replaceAll("/","\\/")}`));const robots=await fetchRoute("/robots.txt");assert.equal(robots.status,200);assert.match(await robots.text(),/Sitemap: https:\/\/migrzz\.com\/sitemap\.xml/);const manifest=await fetchRoute("/manifest.webmanifest");assert.equal(manifest.status,200);assert.match(await manifest.text(),/"name"\s*:\s*"Migrz"/);});
+
+test("mobile navigation and responsive layouts are present",async()=>{const [css,components]=await Promise.all([readFile(new URL("../app/globals.css",import.meta.url),"utf8"),readFile(new URL("../app/site-components.tsx",import.meta.url),"utf8")]);assert.match(css,/@media\(max-width:640px\)/);assert.match(css,/overflow-x:hidden/);assert.match(components,/className="mobile-menu"/);assert.match(components,/aria-label="Open menu"/);});
