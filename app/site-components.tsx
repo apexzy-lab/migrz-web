@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-html-link-for-pages, @next/next/no-img-element, react/no-unescaped-entities */
 import { ASSESSMENT_URL, faqGroups, pathways, type Pathway } from "./site-data";
+import { pathwayCopy } from "./pathway-copy";
 
 const Arrow = () => <span aria-hidden="true">↗</span>;
 
@@ -47,10 +48,14 @@ export function HomePage() {
 }
 
 export function PathwayPage({ pathway }: { pathway: Pathway }) {
+  const copy = pathwayCopy[pathway.slug];
   return <><section className="page-hero pathway-hero"><div><span className="eyebrow light">{pathway.country} · {pathway.eyebrow}</span><h1>{pathway.title}</h1><p>{pathway.summary}</p><div className="hero-actions"><a className="btn-accent" href={ASSESSMENT_URL}>Start your {pathway.code} assessment <Arrow/></a><a className="link-light" href={pathway.officialUrl}>Read official guidance ↗</a></div></div><div className="pathway-index"><span>{pathway.code}</span><small>{pathway.country}</small><b>{pathway.signal}</b></div></section>
     {pathway.note&&<div className="route-notice"><b>Current-program note</b><p>{pathway.note}</p></div>}
     <section className="definition"><span className="eyebrow">What it is</span><div><h2>{pathway.headline}</h2><p>{pathway.definition}</p><a href={pathway.officialUrl}>{pathway.officialLabel} <Arrow/></a></div></section>
+    <section className="route-overview"><div><span className="eyebrow">Understanding the route</span><h2>What this pathway actually asks you to prove.</h2></div><div>{copy.overview.map(paragraph=><p key={paragraph}>{paragraph}</p>)}</div></section>
+    <section className="route-detail-grid"><article><span className="eyebrow">Eligibility logic</span><h2>The principal requirements</h2><ul>{copy.eligibility.map(item=><li key={item}>{item}</li>)}</ul></article><article><span className="eyebrow">Evidence examples</span><h2>Documents that can carry weight</h2><ul>{copy.evidence.map(item=><li key={item}>{item}</li>)}</ul></article></section>
     <section className="framework"><div className="framework-title"><span className="eyebrow light">The evidence architecture</span><h2>{pathway.frameworkTitle}</h2></div><ol>{pathway.framework.map((x,i)=><li key={x}><span>{String(i+1).padStart(2,"0")}</span><p>{x}</p></li>)}</ol></section>
+    <section className="route-detail-grid light-detail"><article><span className="eyebrow">Preparing the case</span><h2>How Migrz structures the work</h2><ol>{copy.preparation.map((item,i)=><li key={item}><b>{String(i+1).padStart(2,"0")}</b><span>{item}</span></li>)}</ol></article><article><span className="eyebrow">Important limitations</span><h2>What applicants should not assume</h2><ul>{copy.cautions.map(item=><li key={item}>{item}</li>)}</ul></article></section>
     <section className="fit-section"><div><span className="eyebrow">Who may fit</span><h2>Built for credible, documentable impact.</h2><ul>{pathway.candidates.map(x=><li key={x}>{x}</li>)}</ul></div><div className="benefit-card"><span>Route characteristics</span>{pathway.benefits.map(x=><p key={x}>✓ {x}</p>)}<small>Eligibility, timing, fees, and government requirements can change. The assessment confirms the current rules for your case.</small></div></section>
     <section className="process-teaser"><span className="eyebrow">From profile to petition</span><h2>Assessment. Strategy. Evidence. Execution.</h2><div>{["Professional assessment","Route and evidence plan","Application preparation","Submission and case management"].map((x,i)=><span key={x}><b>0{i+1}</b>{x}</span>)}</div><a href="/process">See the complete Migrz process <Arrow/></a></section><CTA title={`Find out whether ${pathway.code} fits your record.`}/></>;
 }
