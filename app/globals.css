@@ -23,14 +23,14 @@
 .link-light{border-color:#777}
 .hero-checks{color:#9d9d9d}
 .hero-checks span:before{content:"—";color:#fff}
-.human-review{align-self:stretch;max-height:600px;padding:44px;display:flex;flex-direction:column;justify-content:flex-end;border:1px solid #484848;background:linear-gradient(160deg,#181818 0%,#080808 58%);position:relative;overflow:hidden}
+.human-review{align-self:stretch;min-height:600px;padding:44px;display:flex;flex-direction:column;justify-content:flex-start;border:1px solid #484848;background:linear-gradient(160deg,#181818 0%,#080808 58%);position:relative;overflow:hidden}
 .human-review:before{content:"M";position:absolute;top:-90px;right:-35px;color:transparent;-webkit-text-stroke:1px #343434;font:500 330px/1 var(--serif);transform:rotate(-8deg);pointer-events:none}
 .human-review>.micro{position:relative;color:#a9a9a9;line-height:1.5}
-.human-review>p{position:relative;margin:40px 0 60px;font:400 36px/1.08 var(--serif);letter-spacing:-.035em;color:#fff}
+.human-review>p{position:relative;margin:100px 0 55px;font:400 36px/1.08 var(--serif);letter-spacing:-.035em;color:#fff}
 .review-principles{position:relative;display:flex;flex-direction:column;border-top:1px solid #3e3e3e}
 .review-principles span{padding:17px 0;display:grid;grid-template-columns:42px 1fr;border-bottom:1px solid #3e3e3e;color:#d0d0d0;font-size:12px}
 .review-principles b{font:10px var(--font-mono);color:#888}
-.human-review>a{position:relative;margin-top:28px;display:flex;justify-content:space-between;font-size:12px;font-weight:700}
+.human-review>a{position:relative;margin-top:auto;padding-top:28px;display:flex;justify-content:space-between;font-size:12px;font-weight:700}
 .proof-strip{background:#fff}
 .intro-section{background:#fff}
 .intro-section>div p+p{margin-top:24px}
@@ -56,7 +56,7 @@
   .home-hero{padding-top:78px;padding-bottom:78px}
   .home-hero h1{font-size:clamp(48px,14vw,62px);line-height:.94;letter-spacing:-.065em}
   .home-hero .hero-copy>p{font-size:16px}
-  .human-review{margin-top:48px;min-height:470px;padding:28px}
-  .human-review>p{margin:38px 0 50px;font-size:31px}
+  .human-review{margin-top:48px;min-height:540px;padding:28px}
+  .human-review>p{margin:80px 0 45px;font-size:31px}
   .human-review:before{font-size:250px}
 }
