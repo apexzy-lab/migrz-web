@@ -287,3 +287,43 @@ a:hover>.brand-arrow{transform:translateX(3px)}
   .home-hero h1{font-size:44px}
   .home-hero .hero-checks{grid-template-columns:1fr}
 }
+
+/* Rackwyse-inspired mobile navigation structure, expressed in Migrz branding */
+.footer-col summary{display:block;margin-bottom:19px;color:#888;font:9px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;list-style:none;pointer-events:none}
+.footer-col summary::-webkit-details-marker{display:none}
+.footer-col:not([open])>.footer-links,.footer-links{display:flex;flex-direction:column;gap:10px}
+@media(max-width:1000px){
+  .mobile-menu summary{border-radius:0}
+  .mobile-panel{padding:24px 5% 30px;display:flex;flex-direction:column;background:#070a0a}
+  .mobile-nav-links{display:flex;flex-direction:column}
+  .mobile-nav-links a{min-height:68px;display:grid;grid-template-columns:44px 1fr;align-items:center;border-bottom:1px solid #303536;color:#fff}
+  .mobile-nav-index{color:#aaa;font:9px var(--font-mono);letter-spacing:.08em}
+  .mobile-nav-links b{font-size:29px;line-height:1;letter-spacing:-.045em}
+  .mobile-nav-actions{margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mobile-nav-actions>a{min-height:50px;padding:12px;display:flex;align-items:center;justify-content:center;border:1px solid #555;color:#fff;font-size:11px;font-weight:700;text-align:center}
+  .mobile-nav-actions .mobile-cta{margin:0;background:#fff;color:#050505;border-color:#fff;justify-content:space-between}
+  .mobile-nav-actions .mobile-cta .brand-arrow{width:24px;height:24px}
+}
+@media(max-width:640px){
+  .footer-lead{padding-bottom:42px}
+  .footer-lead h2{margin-top:18px}
+  .footer-grid{display:block;padding:42px 0}
+  .footer-col{border-top:1px solid #303536}
+  .footer-col:last-child{border-bottom:1px solid #303536}
+  .footer-col summary{min-height:57px;margin:0;display:flex;align-items:center;justify-content:space-between;color:#fff;font:10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;list-style:none;cursor:pointer;pointer-events:auto}
+  .footer-col summary::-webkit-details-marker{display:none}
+  .footer-col summary:after{content:"+";font:22px/1 var(--sans);transition:transform .2s}
+  .footer-col[open] summary:after{transform:rotate(45deg)}
+  .footer-col:not([open])>.footer-links{display:none}
+  .footer-links{padding:0 0 18px;gap:0}
+  .footer-links a{min-height:44px;border-top:1px solid #1f2424;color:#ccc}
+  .footer-office{padding:0 0 18px}
+  .footer-office p{margin:8px 0}
+  .footer-legal{padding-top:26px;gap:18px}
+}
+@media(max-width:360px){
+  .mobile-panel{padding-left:6%;padding-right:6%}
+  .mobile-nav-links a{min-height:62px;grid-template-columns:38px 1fr}
+  .mobile-nav-links b{font-size:26px}
+  .mobile-nav-actions{grid-template-columns:1fr}
+}
