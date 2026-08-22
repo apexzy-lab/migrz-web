@@ -16,6 +16,10 @@ const localBindingConfig = {
   main: "./worker/index.ts",
   compatibility_date: "2026-08-21",
   compatibility_flags: ["nodejs_compat"],
+  routes: [
+    { pattern: "migrzz.com", custom_domain: true },
+    { pattern: "www.migrzz.com", custom_domain: true },
+  ],
   d1_databases: d1
     ? [
         {

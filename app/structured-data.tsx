@@ -80,6 +80,25 @@ export function pageGraph(slug: string) {
       "@type": "ItemList", "@id": processId, name: "The Migrz immigration process",
       itemListElement: ["Assess", "Compare", "Build", "Manage"].map((name, index) => ({ "@type": "ListItem", position: index + 1, name })),
     });
+  } else if (slug === "team") {
+    const people = [
+      { "@type": "Person", "@id": `${url}#uchechukwu-ajuzieogu`, name: "Uchechukwu Ajuzieogu", jobTitle: "CEO and Co-Founder", worksFor: { "@id": organizationId } },
+      { "@type": "Person", "@id": `${url}#maryangel-nnamdi`, name: "Maryangel Nnamdi", jobTitle: "COO and Co-Founder", worksFor: { "@id": organizationId } },
+    ];
+    webPage.mainEntity = people.map((person) => ({ "@id": person["@id"] }));
+    graph.push(webPage, ...people);
+  } else if (slug === "case-studies") {
+    const caseListId = `${url}#cases`;
+    webPage.mainEntity = { "@id": caseListId };
+    graph.push(webPage, { "@type": "ItemList", "@id": caseListId, name: "Migrz published client outcome snapshots", itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Healthcare professional — EB-1A" },
+      { "@type": "ListItem", position: 2, name: "Software architect — National Interest Waiver" },
+      { "@type": "ListItem", position: 3, name: "Fintech founder — UAE Golden Visa" },
+    ] });
+  } else if (slug === "assessment") {
+    const assessmentId = `${url}#service`;
+    webPage.mainEntity = { "@id": assessmentId };
+    graph.push(webPage, { "@type": "Service", "@id": assessmentId, name: "Migrz professional immigration assessment", description: seo.description, provider: { "@id": organizationId }, offers: { "@type": "Offer", price: "350", priceCurrency: "USD", url: "https://forms.migrzz.com/?fluent-form=6", availability: "https://schema.org/InStock" } });
   } else if (!slug) {
     const servicesId = `${url}#pathways`;
     webPage.mainEntity = { "@id": servicesId };

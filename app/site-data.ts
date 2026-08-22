@@ -135,7 +135,7 @@ export const pathways: Pathway[] = [
 ];
 
 export const routeSlugs = [
-  "what-makes-us-different", ...pathways.map((p) => p.slug), "process", "98-success-rate", "customers", "faqs", "about"
+  "what-makes-us-different", ...pathways.map((p) => p.slug), "process", "98-success-rate", "case-studies", "customers", "faqs", "about", "team", "assessment", "privacy", "terms", "cookie-policy", "accessibility", "disclaimer"
 ];
 
 export const faqGroups = [

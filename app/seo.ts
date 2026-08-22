@@ -63,6 +63,54 @@ const pageSpecific: Record<string, Omit<SeoPage, "keywords"> & { keywords: strin
     keywords: ["about Migrz", "Migrz immigration company", "specialist immigration technology firm", "achievement immigration specialists", "immigration consulting company", "career mobility advisors", "global immigration strategy firm", "immigration evidence specialists", "professional migration consulting", "human led immigration technology", "San Francisco immigration technology", "international mobility firm"],
     schemaType: "AboutPage",
   },
+  team: {
+    title: "Migrz Leadership and Responsibilities",
+    description: "Meet Migrz co-founders Uchechukwu Ajuzieogu and Maryangel Nnamdi, and understand the boundaries between strategy, operations, legal work, and government decisions.",
+    keywords: ["Migrz founders", "Uchechukwu Ajuzieogu", "Maryangel Nnamdi", "Migrz leadership team", "immigration strategy leadership", "founder led immigration service", "immigration operations team", "immigration evidence specialists", "immigration service accountability", "independent immigration attorneys", "Migrz CEO", "Migrz COO"],
+    schemaType: "AboutPage",
+  },
+  "case-studies": {
+    title: "Migrz Immigration Case Studies",
+    description: "Read privacy-protected Migrz client outcome snapshots covering EB-1A, National Interest Waiver, and UAE Golden Visa strategy, with limitations explained clearly.",
+    keywords: ["immigration case studies", "EB-1A client story", "NIW client outcome", "UAE Golden Visa case study", "immigration approval story", "immigration pathway case example", "healthcare EB-1A case", "software architect NIW case", "fintech founder Golden Visa", "immigration route change story", "Migrz client outcomes", "achievement immigration results"],
+    schemaType: "CollectionPage",
+  },
+  assessment: {
+    title: "$350 Professional Immigration Assessment",
+    description: "See what the $350 Migrz professional assessment includes: cross-route evidence review, a written eligibility report, an expert consultation, and a practical next-step plan.",
+    keywords: ["paid immigration assessment", "$350 immigration assessment", "immigration eligibility report", "professional immigration evaluation", "visa pathway assessment", "immigration evidence review", "immigration strategy consultation", "immigration assessment deliverables", "immigration route recommendation", "48 hour immigration report", "Migrz assessment price", "start Migrz assessment"],
+    schemaType: "WebPage",
+  },
+  privacy: {
+    title: "Migrz Privacy Notice",
+    description: "Understand how Migrz handles website, assessment, professional, analytics, and communication information, together with available privacy choices.",
+    keywords: ["Migrz privacy policy", "immigration data privacy", "assessment information privacy", "immigration document security", "website analytics privacy", "professional information handling", "immigration consultation privacy", "client data retention", "privacy rights immigration service", "Migrz data protection", "assessment form privacy", "immigration records privacy"],
+    schemaType: "WebPage",
+  },
+  terms: {
+    title: "Migrz Website Terms",
+    description: "Review the terms governing Migrz website information, paid service boundaries, responsible use, intellectual property, accuracy, and outcome limitations.",
+    keywords: ["Migrz terms of service", "immigration website terms", "immigration assessment terms", "paid assessment conditions", "immigration service agreement", "immigration information disclaimer", "Migrz service terms", "immigration consulting conditions", "assessment payment terms", "immigration website responsible use", "Migrz intellectual property", "immigration service limitations"],
+    schemaType: "WebPage",
+  },
+  "cookie-policy": {
+    title: "Migrz Cookie Policy",
+    description: "Learn how Migrz uses a necessary preference record and optional Google Analytics, Microsoft Clarity, and Meta Pixel measurement technologies.",
+    keywords: ["Migrz cookie policy", "Google Analytics consent", "Microsoft Clarity consent", "Meta Pixel consent", "immigration website cookies", "analytics privacy choices", "cookie settings Migrz", "website measurement consent", "assessment tracking privacy", "optional analytics cookies", "cross domain analytics consent", "necessary cookie preference"],
+    schemaType: "WebPage",
+  },
+  accessibility: {
+    title: "Migrz Accessibility Statement",
+    description: "Read the Migrz commitment to keyboard, mobile, zoom, reduced-motion, assistive-technology, form, and public-content accessibility.",
+    keywords: ["Migrz accessibility", "immigration website accessibility", "accessible immigration guidance", "keyboard accessible immigration site", "mobile immigration accessibility", "screen reader immigration website", "WCAG immigration site", "accessible assessment form", "reduced motion website", "accessible professional services", "report accessibility barrier", "inclusive immigration technology"],
+    schemaType: "WebPage",
+  },
+  disclaimer: {
+    title: "Migrz Professional Disclaimer",
+    description: "Understand the limits of Migrz website information, assessment findings, case studies, timelines, historical outcomes, and independent legal services.",
+    keywords: ["Migrz disclaimer", "immigration advice disclaimer", "no immigration approval guarantee", "immigration website not legal advice", "historical immigration results", "independent immigration attorney", "immigration assessment limitation", "case study disclaimer", "visa timeline disclaimer", "government decision disclaimer", "immigration eligibility limitation", "professional service disclaimer"],
+    schemaType: "WebPage",
+  },
 };
 
 function pathwayKeywords(pathway: Pathway) {

@@ -14,6 +14,9 @@ Language: English
 - [Frequently asked questions](https://migrzz.com/faqs)
 - [Who Migrz helps](https://migrzz.com/customers)
 - [About Migrz](https://migrzz.com/about)
+- [Migrz leadership and responsibilities](https://migrzz.com/team)
+- [Published client outcome snapshots](https://migrzz.com/case-studies)
+- [Professional assessment scope and price](https://migrzz.com/assessment)
 
 ## Immigration pathways
 
@@ -31,3 +34,5 @@ Language: English
 ## Citation and accuracy notes
 
 Use the canonical page for route-specific details and follow its linked government source for current legal rules. Immigration programs and thresholds can change. Migrz does not guarantee eligibility or approval, and Migrz is not a law firm. Legal services, where required, are provided under separate arrangements.
+
+The 98% figure is a Migrz-reported historical approval rate and is not presented as an independently audited statistic. Conflicting public volume figures have been removed from the current build pending reconciliation against one case ledger.

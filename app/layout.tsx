@@ -1,10 +1,11 @@
-/* Vendor tracking snippets intentionally use inline scripts and Meta's required noscript pixel. */
-/* eslint-disable @next/next/next-script-for-ga, @next/next/no-img-element */
+/* Vendor tracking snippets intentionally use inline scripts. */
+/* eslint-disable @next/next/next-script-for-ga */
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { SiteFooter, SiteHeader } from "./site-components";
 import { SITE_URL } from "./site-data";
 import { JsonLd, siteGraph } from "./structured-data";
+import { AnalyticsConsent } from "./analytics-consent";
 import "./globals.css";
 
 const sans=Geist({variable:"--font-sans",subsets:["latin"]});
@@ -23,16 +24,27 @@ export const metadata:Metadata={
 
 const googleAnalytics=`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
+var migrzConsent = localStorage.getItem('migrz_analytics_consent') === 'accepted' ? 'granted' : 'denied';
+gtag('consent', 'default', {
+  analytics_storage: migrzConsent,
+  ad_storage: migrzConsent,
+  ad_user_data: migrzConsent,
+  ad_personalization: migrzConsent,
+  wait_for_update: 500
+});
 gtag('js', new Date());
-gtag('config', 'G-8X3PLHV88L');`;
+gtag('config', 'G-8X3PLHV88L', {
+  linker: { domains: ['migrzz.com', 'forms.migrzz.com'] },
+  allow_google_signals: migrzConsent === 'granted'
+});`;
 
-const microsoftClarity=`(function(c,l,a,r,i,t,y){
+const microsoftClarity=`if(localStorage.getItem('migrz_analytics_consent') === 'accepted'){(function(c,l,a,r,i,t,y){
   c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
   t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
   y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-})(window, document, "clarity", "script", "uw607xjcnq");`;
+})(window, document, "clarity", "script", "uw607xjcnq");}`;
 
-const metaPixel=`!function(f,b,e,v,n,t,s)
+const metaPixel=`if(localStorage.getItem('migrz_analytics_consent') === 'accepted'){!function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
 if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
@@ -41,7 +53,7 @@ t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '1977570466130181');
-fbq('track', 'PageView');`;
+fbq('track', 'PageView');}`;
 
 export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><head>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-8X3PLHV88L"/>
@@ -49,6 +61,5 @@ export default function RootLayout({children}:{children:React.ReactNode}){return
   <script dangerouslySetInnerHTML={{__html:microsoftClarity}}/>
   <script dangerouslySetInnerHTML={{__html:metaPixel}}/>
 </head><body className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
-  <noscript><img height="1" width="1" style={{display:"none"}} src="https://www.facebook.com/tr?id=1977570466130181&ev=PageView&noscript=1" alt=""/></noscript>
-  <a className="skip-link" href="#main">Skip to content</a><SiteHeader/><main id="main">{children}</main><SiteFooter/><JsonLd data={siteGraph}/>
+  <a className="skip-link" href="#main">Skip to content</a><SiteHeader/><main id="main">{children}</main><SiteFooter/><AnalyticsConsent/><JsonLd data={siteGraph}/>
 </body></html>}
