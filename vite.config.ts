@@ -12,8 +12,8 @@ const { d1, r2 } = hostingConfig;
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const productionRoutes = process.env.MIGRZ_ENABLE_CUSTOM_DOMAINS === "1"
   ? [
-      { pattern: "migrzz.com", custom_domain: true },
-      { pattern: "www.migrzz.com", custom_domain: true },
+      { pattern: "migrzz.com/*", zone_name: "migrzz.com" },
+      { pattern: "www.migrzz.com/*", zone_name: "migrzz.com" },
     ]
   : [];
 
@@ -23,6 +23,7 @@ const localBindingConfig = {
   compatibility_date: "2026-08-21",
   compatibility_flags: ["nodejs_compat"],
   routes: productionRoutes,
+  workers_dev: true,
   d1_databases: d1
     ? [
         {
