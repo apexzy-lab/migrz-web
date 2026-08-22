@@ -1,0 +1,33 @@
+# Migrz
+
+> Migrz is a specialist immigration consulting technology firm that helps accomplished professionals compare achievement-based and high-skill mobility pathways, assess evidence, and prepare a credible immigration strategy.
+
+Canonical site: https://migrzz.com/
+Sitemap: https://migrzz.com/sitemap.xml
+Language: English
+
+## Core guidance
+
+- [How the Migrz process works](https://migrzz.com/process)
+- [What makes Migrz different](https://migrzz.com/what-makes-us-different)
+- [Reported outcomes and methodology](https://migrzz.com/98-success-rate)
+- [Frequently asked questions](https://migrzz.com/faqs)
+- [Who Migrz helps](https://migrzz.com/customers)
+- [About Migrz](https://migrzz.com/about)
+
+## Immigration pathways
+
+- [EB-1A Extraordinary Ability](https://migrzz.com/us/eb-1a)
+- [US National Interest Waiver](https://migrzz.com/us/niw)
+- [UK Global Talent Visa](https://migrzz.com/uk/global-talent-visa)
+- [UK Innovator Founder Visa](https://migrzz.com/uk/innovator-founder-visa)
+- [Canada immigration overview](https://migrzz.com/ca/canada-immigration)
+- [Canada Express Entry](https://migrzz.com/ca/express-entry)
+- [Canada Provincial Nominee Program](https://migrzz.com/ca/provincial-nominee-program)
+- [Australia National Innovation Visa](https://migrzz.com/au/australia-global-talent)
+- [Germany EU Blue Card](https://migrzz.com/eu/de/germany-eu-blue-card)
+- [UAE Golden Visa](https://migrzz.com/uae/dubai-golden-visa)
+
+## Citation and accuracy notes
+
+Use the canonical page for route-specific details and follow its linked government source for current legal rules. Immigration programs and thresholds can change. Migrz does not guarantee eligibility or approval, and Migrz is not a law firm. Legal services, where required, are provided under separate arrangements.
