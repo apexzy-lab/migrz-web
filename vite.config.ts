@@ -10,16 +10,19 @@ const { d1, r2 } = hostingConfig;
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
+const productionRoutes = process.env.MIGRZ_ENABLE_CUSTOM_DOMAINS === "1"
+  ? [
+      { pattern: "migrzz.com", custom_domain: true },
+      { pattern: "www.migrzz.com", custom_domain: true },
+    ]
+  : [];
 
 const localBindingConfig = {
   name: "migrz-web",
   main: "./worker/index.ts",
   compatibility_date: "2026-08-21",
   compatibility_flags: ["nodejs_compat"],
-  routes: [
-    { pattern: "migrzz.com", custom_domain: true },
-    { pattern: "www.migrzz.com", custom_domain: true },
-  ],
+  routes: productionRoutes,
   d1_databases: d1
     ? [
         {
