@@ -292,6 +292,7 @@ a:hover>.brand-arrow{transform:translateX(3px)}
 .footer-col summary{display:block;margin-bottom:19px;color:#888;font:9px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;list-style:none;pointer-events:none}
 .footer-col summary::-webkit-details-marker{display:none}
 .footer-col:not([open])>.footer-links,.footer-links{display:flex;flex-direction:column;gap:10px}
+.footer-grid-mobile{display:none}
 @media(max-width:1000px){
   .mobile-menu summary{border-radius:0}
   .mobile-panel{padding:24px 5% 30px;display:flex;flex-direction:column;background:#070a0a}
@@ -308,6 +309,8 @@ a:hover>.brand-arrow{transform:translateX(3px)}
   .footer-lead{padding-bottom:42px}
   .footer-lead h2{margin-top:18px}
   .footer-grid{display:block;padding:42px 0}
+  .footer-grid-desktop{display:none}
+  .footer-grid-mobile{display:block}
   .footer-col{border-top:1px solid #303536}
   .footer-col:last-child{border-bottom:1px solid #303536}
   .footer-col summary{min-height:57px;margin:0;display:flex;align-items:center;justify-content:space-between;color:#fff;font:10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;list-style:none;cursor:pointer;pointer-events:auto}
