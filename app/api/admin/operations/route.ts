@@ -7,7 +7,7 @@ async function find(publicId: string) {
 
 export async function POST(request: Request) {
   const session = await requireAdmin(request); if (session.error || !session.user) return session.error!;
-  const body = await request.json() as { publicId?: unknown; action?: unknown; subject?: unknown; message?: unknown; dueAt?: unknown; casevaultReference?: unknown; retentionUntil?: unknown };
+  const body = await request.json() as { publicId?: unknown; action?: unknown; subject?: unknown; message?: unknown; dueAt?: unknown; casevaultReference?: unknown; retentionUntil?: unknown; emailId?: unknown };
   const publicId = typeof body.publicId === "string" ? body.publicId : ""; const application = await find(publicId); if (!application) return json({ error: "Application not found" }, 404);
   const action = typeof body.action === "string" ? body.action : ""; const subject = typeof body.subject === "string" ? body.subject.trim().slice(0, 160) : ""; const message = typeof body.message === "string" ? body.message.trim().slice(0, 5000) : ""; const now = Date.now();
   if (action === "message" || action === "request_information") {
@@ -35,6 +35,13 @@ export async function POST(request: Request) {
   if (action === "review_due") {
     const due = Number(body.dueAt); if (!Number.isFinite(due)) return json({ error: "Choose a valid review deadline." }, 400);
     await portalEnv.DB.prepare("UPDATE applications SET review_due_at=?,admin_updated_at=? WHERE id=?").bind(due, now, application.id).run(); await audit("review_due_date_updated", "application", application.id, session.user.id, { publicId, due }); return json({ ok: true });
+  }
+  if (action === "resend_email") {
+    const emailId = typeof body.emailId === "string" ? body.emailId : ""; const deliveryRecord = await portalEnv.DB.prepare("SELECT id,category,subject,status FROM email_deliveries WHERE id=? AND application_id=? LIMIT 1").bind(emailId, application.id).first<{ id: string; category: string; subject: string; status: string }>(); if (!deliveryRecord) return json({ error: "Email record not found." }, 404);
+    let heading = "Update from Migrz"; let detail = "Sign in to your secure portal to review the latest update."; let actionLabel = "Open your secure portal";
+    if (["message", "information_request"].includes(deliveryRecord.category)) { const source = await portalEnv.DB.prepare("SELECT subject,body FROM service_messages WHERE application_id=? AND kind=? ORDER BY created_at DESC LIMIT 1").bind(application.id, deliveryRecord.category).first<{ subject: string; body: string }>(); if (source) { heading = source.subject; detail = source.body; actionLabel = "Read and respond securely"; } }
+    if (deliveryRecord.category === "report_published") { const source = await portalEnv.DB.prepare("SELECT summary FROM assessment_reports WHERE application_id=? AND status='published' ORDER BY version DESC LIMIT 1").bind(application.id).first<{ summary: string }>(); heading = "Your written pathway report is ready"; detail = source?.summary || "Sign in to download your written assessment and book your review call."; actionLabel = "Download your report"; }
+    const email = serviceUpdateEmail(deliveryRecord.subject, heading, detail, actionLabel); const delivery = await deliverTrackedEmail({ userId: application.userId, applicationId: application.id, category: `${deliveryRecord.category}_resend`, recipient: application.email, ...email }); await audit("service_email_resent", "application", application.id, session.user.id, { publicId, originalEmailId: emailId, delivery }); return json({ ok: true, delivery });
   }
   return json({ error: "Unsupported operation" }, 400);
 }
