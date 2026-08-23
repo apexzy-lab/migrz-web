@@ -47,6 +47,7 @@ type CalendlyEventType = { uri?: string; name?: string; active?: boolean; durati
 type BookingContext = { eventTypeUri: string; startTime: string; userId: string; expiresAt: number; schedulingUrl?: string; location?: CalendlyLocation };
 
 let eventTypeCache: { value: CalendlyEventType; expiresAt: number } | null = null;
+let webhookReadyUntil = 0;
 
 async function calendlyIdentity() { return calendlyFetch("/users/me") as Promise<CalendlyIdentity>; }
 
@@ -142,13 +143,15 @@ async function calendlyWebhookKey() {
 }
 
 export async function ensureCalendlyWebhook() {
+  if (webhookReadyUntil > Date.now()) return;
   const identity = await calendlyIdentity(); const user = identity.resource?.uri; const organization = identity.resource?.current_organization;
   if (!user || !organization) throw new Error("CALENDLY_IDENTITY_UNAVAILABLE");
   const key = await calendlyWebhookKey(); const callbackUrl = `https://apply.migrzz.com/api/portal/webhooks/calendly?key=${key}`;
   const params = new URLSearchParams({ organization, scope: "user", user });
   const existing = await calendlyFetch(`/webhook_subscriptions?${params}`) as { collection?: Array<{ callback_url?: string; uri?: string; state?: string }> };
-  if ((existing.collection || []).some((subscription) => subscription.callback_url === callbackUrl && subscription.state !== "disabled")) return;
+  if ((existing.collection || []).some((subscription) => subscription.callback_url === callbackUrl && subscription.state !== "disabled")) { webhookReadyUntil = Date.now() + 6 * 60 * 60 * 1000; return; }
   await calendlyFetch("/webhook_subscriptions", { method: "POST", body: JSON.stringify({ url: callbackUrl, events: ["invitee.created", "invitee.canceled"], organization, user, scope: "user" }) });
+  webhookReadyUntil = Date.now() + 6 * 60 * 60 * 1000;
 }
 
 export function calendlyWebhookSignatureIsValid(rawBody: string, signatureHeader: string) {

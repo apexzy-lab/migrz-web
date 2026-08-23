@@ -1,6 +1,6 @@
 import { appointmentEmail, sendPortalEmail } from "@/app/portal/email";
 import { audit, json, portalEnv, randomId, requireSession } from "@/app/portal/server";
-import { CalendlyApiError, calendlyErrorCode, scheduleCalendlyInvitee } from "@/app/portal/calendly";
+import { CalendlyApiError, calendlyErrorCode, ensureCalendlyWebhook, scheduleCalendlyInvitee } from "@/app/portal/calendly";
 
 type Appointment = { id: string; publicId: string; status: string; requestedStart: number; durationMinutes: number; timezone: string; applicantNote: string; confirmedStart: number | null; meetingUrl: string | null; adminNote: string; provider: string; providerBookingUrl: string | null; cancelUrl: string | null; rescheduleUrl: string | null; completedAt: number | null; createdAt: number; updatedAt: number };
 
@@ -10,7 +10,9 @@ async function current(userId: string) {
 
 export async function GET(request: Request) {
   const session = await requireSession(request, true); if (session.error || !session.user) return session.error!;
-  return json({ appointment: await current(session.user.id) });
+  const appointment = await current(session.user.id);
+  if (appointment?.providerBookingUrl) await ensureCalendlyWebhook().catch(async () => audit("calendly_webhook_ensure_failed", "appointment", appointment.id, session.user!.id, { publicId: appointment.publicId }));
+  return json({ appointment });
 }
 
 export async function POST(request: Request) {

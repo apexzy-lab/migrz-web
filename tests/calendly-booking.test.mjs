@@ -23,6 +23,7 @@ test("Calendly booking uses signed slots, retries rate limits and supports admin
   assert.match(appointment, /bookingFallback: Boolean\(useCalendly && !booking\)/);
   assert.match(appointment, /refreshSlots: true/);
   assert.match(appointment, /provider_booking_url/);
+  assert.match(appointment, /ensureCalendlyWebhook/);
   assert.match(adminAppointment, /appointment_calendly_synced/);
   assert.match(adminAppointment, /shouldSyncCalendly/);
   assert.match(client, /slotTokens\[requestedStart\]/);
