@@ -11,9 +11,7 @@ type PortalEnv = {
   ZEPTOMAIL_FROM?: string;
   ZEPTOMAIL_FROM_NAME?: string;
   PAYSTACK_SECRET_KEY?: string;
-  PAYSTACK_CURRENCY?: string;
-  PAYSTACK_STANDARD_AMOUNT_MINOR?: string;
-  PAYSTACK_ACCELERATED_AMOUNT_MINOR?: string;
+  WISE_API_TOKEN?: string;
   PAYPAL_CLIENT_ID?: string;
   PAYPAL_CLIENT_SECRET?: string;
   PAYPAL_WEBHOOK_ID?: string;
@@ -115,16 +113,34 @@ export async function sendLoginCode(email: string, code: string) {
 }
 
 export function integrationStatus() {
-  return { email: Boolean(portalEnv.ZEPTOMAIL_TOKEN && portalEnv.SESSION_SECRET), paystack: Boolean(portalEnv.PAYSTACK_SECRET_KEY), paypal: Boolean(portalEnv.PAYPAL_CLIENT_ID && portalEnv.PAYPAL_CLIENT_SECRET && portalEnv.PAYPAL_WEBHOOK_ID) };
+  return { email: Boolean(portalEnv.ZEPTOMAIL_TOKEN && portalEnv.SESSION_SECRET), paystack: Boolean(portalEnv.PAYSTACK_SECRET_KEY), paypal: Boolean(portalEnv.PAYPAL_CLIENT_ID && portalEnv.PAYPAL_CLIENT_SECRET && portalEnv.PAYPAL_WEBHOOK_ID), wise: Boolean(portalEnv.WISE_API_TOKEN) };
 }
 
-export function paymentAmount(provider: ProviderId, plan: PlanId) {
-  if (provider === "paystack" && (portalEnv.PAYSTACK_CURRENCY || "USD").toUpperCase() !== "USD") {
-    const configured = plan === "standard" ? portalEnv.PAYSTACK_STANDARD_AMOUNT_MINOR : portalEnv.PAYSTACK_ACCELERATED_AMOUNT_MINOR;
-    if (!configured || !/^\d+$/.test(configured)) throw new Error("PAYSTACK_AMOUNT_NOT_CONFIGURED");
-    return { amountMinor: Number(configured), currency: (portalEnv.PAYSTACK_CURRENCY || "NGN").toUpperCase() };
-  }
-  return { amountMinor: plans[plan].usdMinor, currency: "USD" };
+export type PaymentQuote = { userId: string; plan: PlanId; provider: ProviderId; baseUsdMinor: number; amountMinor: number; currency: "USD" | "NGN"; rate: number | null; source: "Wise" | "Migrz"; quotedAt: number; expiresAt: number };
+
+function quotePayload(value: PaymentQuote) { return btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, ""); }
+function readQuotePayload(value: string) { const normalized = value.replaceAll("-", "+").replaceAll("_", "/"); return JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="))) as PaymentQuote; }
+
+export async function createPaymentQuote(userId: string, plan: PlanId, provider: ProviderId) {
+  const quotedAt = Date.now(); const baseUsdMinor = plans[plan].usdMinor;
+  let quote: PaymentQuote;
+  if (provider === "paystack") {
+    if (!portalEnv.WISE_API_TOKEN) throw new Error("WISE_NOT_CONFIGURED");
+    const response = await fetch("https://api.wise.com/v1/rates?source=USD&target=NGN", { headers: { Authorization: `Bearer ${portalEnv.WISE_API_TOKEN}` } });
+    const rates = await response.json() as Array<{ rate?: number; source?: string; target?: string; time?: string }>;
+    const current = Array.isArray(rates) ? rates.find((item) => item.source === "USD" && item.target === "NGN" && Number(item.rate) > 0) : null;
+    if (!response.ok || !current?.rate) throw new Error("WISE_RATE_UNAVAILABLE");
+    const rate = Number(current.rate); const amountMinor = Math.round((baseUsdMinor / 100) * rate) * 100;
+    quote = { userId, plan, provider, baseUsdMinor, amountMinor, currency: "NGN", rate, source: "Wise", quotedAt, expiresAt: quotedAt + 15 * 60000 };
+  } else quote = { userId, plan, provider, baseUsdMinor, amountMinor: baseUsdMinor, currency: "USD", rate: null, source: "Migrz", quotedAt, expiresAt: quotedAt + 15 * 60000 };
+  if (!portalEnv.SESSION_SECRET) throw new Error("SESSION_NOT_CONFIGURED");
+  const payload = quotePayload(quote); const signature = await hmacHex(payload, portalEnv.SESSION_SECRET); return { quote, token: `${payload}.${signature}` };
+}
+
+export async function verifyPaymentQuote(token: unknown, userId: string, plan: PlanId, provider: ProviderId) {
+  if (typeof token !== "string" || !portalEnv.SESSION_SECRET) return null; const [payload, signature] = token.split("."); if (!payload || !signature) return null;
+  const expected = await hmacHex(payload, portalEnv.SESSION_SECRET); if (!timingSafeEqual(signature, expected)) return null;
+  try { const quote = readQuotePayload(payload); if (quote.userId !== userId || quote.plan !== plan || quote.provider !== provider || quote.expiresAt < Date.now() || !Number.isInteger(quote.amountMinor) || quote.amountMinor <= 0) return null; return quote; } catch { return null; }
 }
 
 export function paypalBaseUrl() { return portalEnv.PAYPAL_MODE === "sandbox" ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com"; }

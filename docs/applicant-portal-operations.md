@@ -25,6 +25,7 @@ control or a local committed environment file.
 - `SESSION_SECRET`
 - `ZEPTOMAIL_TOKEN`
 - `PAYSTACK_SECRET_KEY`
+- `WISE_API_TOKEN`
 - `PAYPAL_CLIENT_ID`
 - `PAYPAL_CLIENT_SECRET`
 - `PAYPAL_WEBHOOK_ID`
@@ -35,10 +36,9 @@ Optional Worker variables:
   verified in ZeptoMail)
 - `ZEPTOMAIL_FROM_NAME` (defaults to `Migrz`)
 - `PAYPAL_MODE` (`sandbox` during testing; omit for live)
-- `PAYSTACK_CURRENCY` (defaults to `USD`)
-- `PAYSTACK_STANDARD_AMOUNT_MINOR` and
-  `PAYSTACK_ACCELERATED_AMOUNT_MINOR` (required when Paystack uses a currency
-  other than USD; values are provider currency minor units)
+- Nigerian Paystack checkout is quoted in NGN using Wise's authenticated
+  USD/NGN rate API. Migrz adds no FX markup, rounds to the nearest naira, shows
+  the rate and timestamp, and locks the signed quote for 15 minutes.
 
 ## Provider webhooks
 
