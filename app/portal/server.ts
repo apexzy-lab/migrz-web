@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { sendPortalEmail } from "@/app/portal/email";
 
 export type PlanId = "standard" | "accelerated";
 export type ProviderId = "paystack" | "paypal";
@@ -101,24 +102,13 @@ export async function audit(event: string, entityType: string, entityId: string 
 }
 
 export async function sendLoginCode(email: string, code: string) {
-  if (!portalEnv.ZEPTOMAIL_TOKEN) throw new Error("ZEPTOMAIL_NOT_CONFIGURED");
-  const from = portalEnv.ZEPTOMAIL_FROM || "comms@migrzz.com";
-  // ZeptoMail sometimes presents the copied value with its authorization
-  // scheme. Accept either that full value or the raw Send Mail Token so the
-  // Worker never produces a duplicated scheme.
-  const token = portalEnv.ZEPTOMAIL_TOKEN.trim().replace(/^zoho-enczapikey\s+/i, "");
-  if (!token) throw new Error("ZEPTOMAIL_NOT_CONFIGURED");
-  const response = await fetch("https://api.zeptomail.com/v1.1/email", {
-    method: "POST", headers: { Authorization: `Zoho-enczapikey ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ from: { address: from, name: portalEnv.ZEPTOMAIL_FROM_NAME || "Migrz" }, to: [{ email_address: { address: email } }],
-      subject: `${code} is your Migrz sign-in code`, textbody: `Your Migrz sign-in code is ${code}. It expires in 10 minutes. If you did not request it, ignore this message.`,
-      htmlbody: `<div style="font-family:Arial,sans-serif;color:#172333;max-width:560px;margin:auto"><h1 style="color:#10233f">MIGRZ</h1><p>Your one-time sign-in code is:</p><p style="font-size:34px;letter-spacing:8px;font-weight:700">${code}</p><p>This code expires in 10 minutes. Migrz will never ask you to share it.</p></div>` }),
-  });
-  if (!response.ok) {
-    const providerMessage = (await response.text()).slice(0, 500).replace(/[\r\n]+/g, " ");
-    console.error("ZeptoMail rejected a portal sign-in email", { status: response.status, providerMessage });
-    throw new Error(`ZEPTOMAIL_${response.status}`);
-  }
+  await sendPortalEmail(
+    { token: portalEnv.ZEPTOMAIL_TOKEN, from: portalEnv.ZEPTOMAIL_FROM, fromName: portalEnv.ZEPTOMAIL_FROM_NAME },
+    email,
+    `${code} is your Migrz sign-in code`,
+    `Your Migrz sign-in code is ${code}. It expires in 10 minutes. If you did not request it, ignore this message.`,
+    `<div style="font-family:Arial,sans-serif;color:#172333;max-width:560px;margin:auto"><h1 style="color:#10233f">MIGRZ</h1><p>Your one-time sign-in code is:</p><p style="font-size:34px;letter-spacing:8px;font-weight:700">${code}</p><p>This code expires in 10 minutes. Migrz will never ask you to share it.</p></div>`,
+  );
 }
 
 export function integrationStatus() {

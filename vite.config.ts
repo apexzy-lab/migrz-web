@@ -21,6 +21,7 @@ const localBindingConfig = {
   compatibility_flags: ["nodejs_compat"],
   routes: productionRoutes,
   workers_dev: true,
+  triggers: { crons: ["*/5 * * * *"] },
   d1_databases: [{ binding: "DB", database_name: "migrz-applications", database_id: MIGRZ_APPLICATIONS_DATABASE_ID }],
   r2_buckets: [{ binding: "DOCUMENTS", bucket_name: "migrz-applicant-documents" }],
 };

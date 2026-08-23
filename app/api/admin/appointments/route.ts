@@ -1,0 +1,19 @@
+import { appointmentEmail, sendPortalEmail } from "@/app/portal/email";
+import { audit, json, portalEnv, requireAdmin } from "@/app/portal/server";
+
+const statuses = ["requested", "confirmed", "completed", "cancelled"];
+
+export async function PATCH(request: Request) {
+  const session = await requireAdmin(request); if (session.error || !session.user) return session.error!;
+  const body = await request.json() as { id?: unknown; status?: unknown; confirmedStart?: unknown; meetingUrl?: unknown; adminNote?: unknown };
+  const id = typeof body.id === "string" ? body.id : ""; const status = typeof body.status === "string" ? body.status : ""; if (!id || !statuses.includes(status)) return json({ error: "Invalid appointment update." }, 400);
+  const record = await portalEnv.DB.prepare(`SELECT ar.id,ar.public_id AS publicId,ar.status,ar.duration_minutes AS durationMinutes,ar.confirmed_start AS confirmedStart,a.public_id AS applicationPublicId,u.email FROM appointment_requests ar JOIN applications a ON a.id=ar.application_id JOIN users u ON u.id=ar.user_id WHERE ar.id=? LIMIT 1`).bind(id).first<{ id: string; publicId: string; status: string; durationMinutes: number; confirmedStart: number | null; applicationPublicId: string; email: string }>();
+  if (!record) return json({ error: "Appointment not found." }, 404);
+  const confirmedStart = body.confirmedStart == null || body.confirmedStart === "" ? null : Number(body.confirmedStart); const meetingUrl = typeof body.meetingUrl === "string" ? body.meetingUrl.trim().slice(0, 500) : ""; const adminNote = typeof body.adminNote === "string" ? body.adminNote.trim().slice(0, 1000) : "";
+  if (status === "confirmed" && (!Number.isInteger(confirmedStart) || Number(confirmedStart) < Date.now())) return json({ error: "Choose a future confirmed time." }, 400);
+  if (meetingUrl && !/^https:\/\//i.test(meetingUrl)) return json({ error: "Meeting links must use HTTPS." }, 400);
+  const now = Date.now(); await portalEnv.DB.prepare("UPDATE appointment_requests SET status=?,confirmed_start=?,meeting_url=?,admin_note=?,updated_at=? WHERE id=?").bind(status, confirmedStart, meetingUrl || null, adminNote, now, id).run();
+  await audit("appointment_updated", "appointment", id, session.user.id, { publicId: record.publicId, status, confirmedStart, durationMinutes: record.durationMinutes });
+  if (status === "confirmed" && confirmedStart && (record.status !== "confirmed" || record.confirmedStart !== confirmedStart)) { const message = appointmentEmail(record.applicationPublicId, "Your Migrz assessment call is confirmed", `Confirmed time: ${new Date(confirmedStart).toISOString()}. Duration: ${record.durationMinutes} minutes.${meetingUrl ? ` Meeting link: ${meetingUrl}` : " Call details are available in your portal."}`); try { await sendPortalEmail({ token: portalEnv.ZEPTOMAIL_TOKEN, from: portalEnv.ZEPTOMAIL_FROM, fromName: portalEnv.ZEPTOMAIL_FROM_NAME }, record.email, message.subject, message.text, message.html); } catch { return json({ ok: true, warning: "Appointment saved, but the confirmation email could not be sent." }); } }
+  return json({ ok: true });
+}

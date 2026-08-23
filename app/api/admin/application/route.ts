@@ -1,9 +1,10 @@
 import { audit, json, portalEnv, randomId, requireAdmin } from "@/app/portal/server";
+import { reviewCompletedEmail, sendPortalEmail } from "@/app/portal/email";
 
 const reviewStatuses = ["submitted", "in_review", "needs_information", "completed", "closed"] as const;
 
 async function findApplication(publicId: string) {
-  return portalEnv.DB.prepare(`SELECT a.id,a.public_id AS publicId,a.status,a.review_status AS reviewStatus,a.current_section AS currentSection,a.answers_json AS answersJson,a.submitted_at AS submittedAt,a.updated_at AS updatedAt,a.admin_updated_at AS adminUpdatedAt,u.email,u.country_residence AS countryResidence,e.plan,ad.email AS assignedTo FROM applications a JOIN users u ON u.id=a.user_id LEFT JOIN entitlements e ON e.user_id=u.id AND e.status='active' LEFT JOIN admins aa ON aa.id=a.assigned_admin_id LEFT JOIN users ad ON ad.id=aa.user_id WHERE a.public_id=? LIMIT 1`).bind(publicId).first<{ id: string; publicId: string; status: string; reviewStatus: string; currentSection: number; answersJson: string; submittedAt: number | null; updatedAt: number; adminUpdatedAt: number | null; email: string; countryResidence: string; plan: string | null; assignedTo: string | null }>();
+  return portalEnv.DB.prepare(`SELECT a.id,a.public_id AS publicId,a.status,a.review_status AS reviewStatus,a.current_section AS currentSection,a.answers_json AS answersJson,a.submitted_at AS submittedAt,a.updated_at AS updatedAt,a.admin_updated_at AS adminUpdatedAt,a.review_notification_sent_at AS reviewNotificationSentAt,u.email,u.country_residence AS countryResidence,e.plan,ad.email AS assignedTo FROM applications a JOIN users u ON u.id=a.user_id LEFT JOIN entitlements e ON e.user_id=u.id AND e.status='active' LEFT JOIN admins aa ON aa.id=a.assigned_admin_id LEFT JOIN users ad ON ad.id=aa.user_id WHERE a.public_id=? LIMIT 1`).bind(publicId).first<{ id: string; publicId: string; status: string; reviewStatus: string; currentSection: number; answersJson: string; submittedAt: number | null; updatedAt: number; adminUpdatedAt: number | null; reviewNotificationSentAt: number | null; email: string; countryResidence: string; plan: string | null; assignedTo: string | null }>();
 }
 
 export async function GET(request: Request) {
@@ -19,7 +20,16 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   const session = await requireAdmin(request); if (session.error || !session.user) return session.error!; const body = await request.json() as { publicId?: unknown; reviewStatus?: unknown; assignedAdminId?: unknown }; const publicId = typeof body.publicId === "string" ? body.publicId : ""; const application = await findApplication(publicId); if (!application) return json({ error: "Application not found" }, 404); if (typeof body.reviewStatus !== "string" || !reviewStatuses.includes(body.reviewStatus as typeof reviewStatuses[number])) return json({ error: "Invalid review status" }, 400);
   const assignedAdminId = typeof body.assignedAdminId === "string" && body.assignedAdminId ? body.assignedAdminId : null; if (assignedAdminId) { const admin = await portalEnv.DB.prepare("SELECT id FROM admins WHERE id=? AND status='active'").bind(assignedAdminId).first(); if (!admin) return json({ error: "Invalid assignee" }, 400); }
-  const now = Date.now(); await portalEnv.DB.prepare("UPDATE applications SET review_status=?,assigned_admin_id=?,admin_updated_at=?,updated_at=? WHERE id=?").bind(body.reviewStatus, assignedAdminId, now, now, application.id).run(); await audit("application_review_updated", "application", application.id, session.user.id, { publicId, reviewStatus: body.reviewStatus, assignedAdminId }); return json({ ok: true, updatedAt: now });
+  const now = Date.now(); await portalEnv.DB.prepare("UPDATE applications SET review_status=?,assigned_admin_id=?,admin_updated_at=?,updated_at=? WHERE id=?").bind(body.reviewStatus, assignedAdminId, now, now, application.id).run(); await audit("application_review_updated", "application", application.id, session.user.id, { publicId, reviewStatus: body.reviewStatus, assignedAdminId });
+  let notification: "sent" | "queued" | "unchanged" = "unchanged";
+  if (body.reviewStatus === "completed" && !application.reviewNotificationSentAt) {
+    const claim = await portalEnv.DB.prepare("UPDATE applications SET review_notification_sent_at=-1 WHERE id=? AND review_notification_sent_at IS NULL").bind(application.id).run();
+    if (claim.meta.changes) { const answers = JSON.parse(application.answersJson || "{}") as { fullName?: string }; const message = reviewCompletedEmail(application.publicId, answers.fullName || "");
+      try { await sendPortalEmail({ token: portalEnv.ZEPTOMAIL_TOKEN, from: portalEnv.ZEPTOMAIL_FROM, fromName: portalEnv.ZEPTOMAIL_FROM_NAME }, application.email, message.subject, message.text, message.html); await portalEnv.DB.prepare("UPDATE applications SET review_notification_sent_at=?,review_notification_attempts=review_notification_attempts+1 WHERE id=?").bind(Date.now(), application.id).run(); await audit("review_completion_email_sent", "application", application.id, session.user.id, { publicId }); notification = "sent"; }
+      catch { await portalEnv.DB.prepare("UPDATE applications SET review_notification_sent_at=NULL,review_notification_attempts=review_notification_attempts+1 WHERE id=?").bind(application.id).run(); await audit("review_completion_email_queued", "application", application.id, session.user.id, { publicId }); notification = "queued"; }
+    }
+  }
+  return json({ ok: true, updatedAt: now, notification });
 }
 
 export async function POST(request: Request) {

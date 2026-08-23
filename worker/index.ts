@@ -1,11 +1,15 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { reviewCompletedEmail, sendPortalEmail } from "../app/portal/email";
 
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   DOCUMENTS: R2Bucket;
+  ZEPTOMAIL_TOKEN?: string;
+  ZEPTOMAIL_FROM?: string;
+  ZEPTOMAIL_FROM_NAME?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -70,6 +74,20 @@ const worker = {
 
     return handler.fetch(request, env, ctx);
   },
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(processReviewNotificationQueue(env));
+  },
 };
+
+async function processReviewNotificationQueue(env: Env) {
+  if (!env.ZEPTOMAIL_TOKEN) return;
+  const pending = await env.DB.prepare(`SELECT a.id,a.public_id AS publicId,a.answers_json AS answersJson,u.email FROM applications a JOIN users u ON u.id=a.user_id WHERE a.review_status='completed' AND a.review_notification_sent_at IS NULL AND a.review_notification_attempts<10 ORDER BY a.admin_updated_at ASC LIMIT 20`).all<{ id: string; publicId: string; answersJson: string; email: string }>();
+  for (const application of pending.results) {
+    const claim = await env.DB.prepare("UPDATE applications SET review_notification_sent_at=-1 WHERE id=? AND review_notification_sent_at IS NULL").bind(application.id).run(); if (!claim.meta.changes) continue;
+    const answers = JSON.parse(application.answersJson || "{}") as { fullName?: string }; const message = reviewCompletedEmail(application.publicId, answers.fullName || "");
+    try { await sendPortalEmail({ token: env.ZEPTOMAIL_TOKEN, from: env.ZEPTOMAIL_FROM, fromName: env.ZEPTOMAIL_FROM_NAME }, application.email, message.subject, message.text, message.html); await env.DB.prepare("UPDATE applications SET review_notification_sent_at=?,review_notification_attempts=review_notification_attempts+1 WHERE id=? AND review_notification_sent_at=-1").bind(Date.now(), application.id).run(); }
+    catch { await env.DB.prepare("UPDATE applications SET review_notification_sent_at=NULL,review_notification_attempts=review_notification_attempts+1 WHERE id=?").bind(application.id).run(); }
+  }
+}
 
 export default worker;
