@@ -53,7 +53,7 @@ export function AnalyticsConsent() {
         return;
       }
       const anchor = target?.closest<HTMLAnchorElement>("a[href]");
-      if (anchor && new URL(anchor.href, window.location.href).hostname === "forms.migrzz.com") recordAssessmentClick(anchor);
+      if (anchor && new URL(anchor.href, window.location.href).hostname === "apply.migrzz.com") recordAssessmentClick(anchor);
     };
     document.addEventListener("click", onClick, true);
     return () => {

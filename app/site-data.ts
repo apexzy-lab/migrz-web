@@ -1,5 +1,5 @@
 export const SITE_URL = "https://migrzz.com";
-export const ASSESSMENT_URL = "https://forms.migrzz.com/?fluent-form=6";
+export const ASSESSMENT_URL = "https://apply.migrzz.com/";
 
 export type Pathway = {
   slug: string;
