@@ -95,7 +95,7 @@ export async function audit(event: string, entityType: string, entityId: string 
 
 export async function sendLoginCode(email: string, code: string) {
   if (!portalEnv.ZEPTOMAIL_TOKEN) throw new Error("ZEPTOMAIL_NOT_CONFIGURED");
-  const from = portalEnv.ZEPTOMAIL_FROM || "noreply@migrzz.com";
+  const from = portalEnv.ZEPTOMAIL_FROM || "comms@migrzz.com";
   // ZeptoMail sometimes presents the copied value with its authorization
   // scheme. Accept either that full value or the raw Send Mail Token so the
   // Worker never produces a duplicated scheme.

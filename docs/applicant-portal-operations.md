@@ -31,7 +31,7 @@ control or a local committed environment file.
 
 Optional Worker variables:
 
-- `ZEPTOMAIL_FROM` (defaults to `noreply@migrzz.com`; the address must be
+- `ZEPTOMAIL_FROM` (defaults to `comms@migrzz.com`; the address must be
   verified in ZeptoMail)
 - `ZEPTOMAIL_FROM_NAME` (defaults to `Migrz`)
 - `PAYPAL_MODE` (`sandbox` during testing; omit for live)
