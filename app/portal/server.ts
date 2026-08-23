@@ -17,6 +17,9 @@ type PortalEnv = {
   PAYPAL_CLIENT_SECRET?: string;
   PAYPAL_WEBHOOK_ID?: string;
   PAYPAL_MODE?: string;
+  CALENDLY_API_TOKEN?: string;
+  CALENDLY_EVENT_TYPE_URI?: string;
+  CALENDLY_WEBHOOK_SIGNING_KEY?: string;
 };
 
 export const portalEnv = env as unknown as PortalEnv;
@@ -112,7 +115,14 @@ export async function sendLoginCode(email: string, code: string) {
 }
 
 export function integrationStatus() {
-  return { email: Boolean(portalEnv.ZEPTOMAIL_TOKEN && portalEnv.SESSION_SECRET), paystack: Boolean(portalEnv.PAYSTACK_SECRET_KEY), paypal: Boolean(portalEnv.PAYPAL_CLIENT_ID && portalEnv.PAYPAL_CLIENT_SECRET && portalEnv.PAYPAL_WEBHOOK_ID), wise: Boolean(portalEnv.WISE_API_TOKEN) };
+  return { email: Boolean(portalEnv.ZEPTOMAIL_TOKEN && portalEnv.SESSION_SECRET), paystack: Boolean(portalEnv.PAYSTACK_SECRET_KEY), paypal: Boolean(portalEnv.PAYPAL_CLIENT_ID && portalEnv.PAYPAL_CLIENT_SECRET && portalEnv.PAYPAL_WEBHOOK_ID), wise: Boolean(portalEnv.WISE_API_TOKEN), calendly: Boolean(portalEnv.CALENDLY_API_TOKEN && portalEnv.CALENDLY_EVENT_TYPE_URI) };
+}
+
+export async function createNotification(userId: string, type: string, title: string, message: string, actionLabel?: string, actionView?: string, entityType?: string, entityId?: string) {
+  const id = randomId("ntf_");
+  await portalEnv.DB.prepare("INSERT INTO notifications (id,user_id,type,title,message,action_label,action_view,entity_type,entity_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+    .bind(id, userId, type, title, message, actionLabel || null, actionView || null, entityType || null, entityId || null, Date.now()).run();
+  return id;
 }
 
 export type PaymentQuote = { userId: string; plan: PlanId; provider: ProviderId; baseUsdMinor: number; amountMinor: number; currency: "USD" | "NGN"; rate: number | null; source: "Wise" | "Migrz"; quotedAt: number; expiresAt: number };

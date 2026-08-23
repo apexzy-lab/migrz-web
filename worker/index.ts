@@ -1,7 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
-import { reviewCompletedEmail, sendPortalEmail } from "../app/portal/email";
+import { callCompletedEmail, reviewCompletedEmail, sendPortalEmail } from "../app/portal/email";
 
 interface Env {
   ASSETS: Fetcher;
@@ -75,7 +75,7 @@ const worker = {
     return handler.fetch(request, env, ctx);
   },
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(processReviewNotificationQueue(env));
+    ctx.waitUntil(Promise.all([processReviewNotificationQueue(env), processCallCompletionNotificationQueue(env)]));
   },
 };
 
@@ -87,6 +87,17 @@ async function processReviewNotificationQueue(env: Env) {
     const answers = JSON.parse(application.answersJson || "{}") as { fullName?: string }; const message = reviewCompletedEmail(application.publicId, answers.fullName || "");
     try { await sendPortalEmail({ token: env.ZEPTOMAIL_TOKEN, from: env.ZEPTOMAIL_FROM, fromName: env.ZEPTOMAIL_FROM_NAME }, application.email, message.subject, message.text, message.html); await env.DB.prepare("UPDATE applications SET review_notification_sent_at=?,review_notification_attempts=review_notification_attempts+1 WHERE id=? AND review_notification_sent_at=-1").bind(Date.now(), application.id).run(); }
     catch { await env.DB.prepare("UPDATE applications SET review_notification_sent_at=NULL,review_notification_attempts=review_notification_attempts+1 WHERE id=?").bind(application.id).run(); }
+  }
+}
+
+async function processCallCompletionNotificationQueue(env: Env) {
+  if (!env.ZEPTOMAIL_TOKEN) return;
+  const pending = await env.DB.prepare(`SELECT ar.id,ar.public_id AS publicId,ar.admin_note AS adminNote,a.public_id AS applicationPublicId,u.email FROM appointment_requests ar JOIN applications a ON a.id=ar.application_id JOIN users u ON u.id=ar.user_id WHERE ar.status='completed' AND ar.completion_notification_sent_at IS NULL AND ar.completion_notification_attempts<10 ORDER BY ar.completed_at ASC LIMIT 20`).all<{ id: string; publicId: string; adminNote: string; applicationPublicId: string; email: string }>();
+  for (const appointment of pending.results) {
+    const claim = await env.DB.prepare("UPDATE appointment_requests SET completion_notification_sent_at=-1 WHERE id=? AND completion_notification_sent_at IS NULL").bind(appointment.id).run(); if (!claim.meta.changes) continue;
+    const message = callCompletedEmail(appointment.applicationPublicId, appointment.publicId, appointment.adminNote);
+    try { await sendPortalEmail({ token: env.ZEPTOMAIL_TOKEN, from: env.ZEPTOMAIL_FROM, fromName: env.ZEPTOMAIL_FROM_NAME }, appointment.email, message.subject, message.text, message.html); await env.DB.prepare("UPDATE appointment_requests SET completion_notification_sent_at=?,completion_notification_attempts=completion_notification_attempts+1 WHERE id=? AND completion_notification_sent_at=-1").bind(Date.now(), appointment.id).run(); }
+    catch { await env.DB.prepare("UPDATE appointment_requests SET completion_notification_sent_at=NULL,completion_notification_attempts=completion_notification_attempts+1 WHERE id=?").bind(appointment.id).run(); }
   }
 }
 

@@ -61,3 +61,21 @@ export const auditEvents = sqliteTable("audit_events", {
   entityType: text("entity_type").notNull(), entityId: text("entity_id"), metadataJson: text("metadata_json").notNull().default("{}"),
   createdAt: integer("created_at").notNull(),
 }, (table) => [index("idx_audit_events_entity_created").on(table.entityType, table.entityId, table.createdAt)]);
+
+export const notifications = sqliteTable("notifications", {
+  id: text("id").primaryKey(), userId: text("user_id").notNull(), type: text("type").notNull(),
+  title: text("title").notNull(), message: text("message").notNull(), actionLabel: text("action_label"),
+  actionView: text("action_view"), entityType: text("entity_type"), entityId: text("entity_id"),
+  readAt: integer("read_at"), createdAt: integer("created_at").notNull(),
+}, (table) => [index("idx_notifications_user_created").on(table.userId, table.createdAt), index("idx_notifications_user_unread").on(table.userId, table.readAt)]);
+
+export const appointmentRequests = sqliteTable("appointment_requests", {
+  id: text("id").primaryKey(), publicId: text("public_id").notNull(), applicationId: text("application_id").notNull(),
+  userId: text("user_id").notNull(), requestedStart: integer("requested_start").notNull(), durationMinutes: integer("duration_minutes").notNull().default(60),
+  timezone: text("timezone").notNull(), applicantNote: text("applicant_note").notNull().default(""), status: text("status").notNull().default("requested"),
+  confirmedStart: integer("confirmed_start"), meetingUrl: text("meeting_url"), adminNote: text("admin_note").notNull().default(""),
+  provider: text("provider").notNull().default("manual"), providerEventUri: text("provider_event_uri"), providerInviteeUri: text("provider_invitee_uri"),
+  cancelUrl: text("cancel_url"), rescheduleUrl: text("reschedule_url"), completedAt: integer("completed_at"),
+  completionNotificationSentAt: integer("completion_notification_sent_at"), completionNotificationAttempts: integer("completion_notification_attempts").notNull().default(0),
+  createdAt: integer("created_at").notNull(), updatedAt: integer("updated_at").notNull(),
+}, (table) => [uniqueIndex("idx_appointment_application").on(table.applicationId), uniqueIndex("idx_appointment_public_id").on(table.publicId), index("idx_appointment_status_start").on(table.status, table.requestedStart)]);

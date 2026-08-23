@@ -29,6 +29,9 @@ control or a local committed environment file.
 - `PAYPAL_CLIENT_ID`
 - `PAYPAL_CLIENT_SECRET`
 - `PAYPAL_WEBHOOK_ID`
+- `CALENDLY_API_TOKEN`
+- `CALENDLY_EVENT_TYPE_URI`
+- `CALENDLY_WEBHOOK_SIGNING_KEY`
 
 Optional Worker variables:
 
@@ -45,6 +48,24 @@ Optional Worker variables:
 - Paystack: `https://apply.migrzz.com/api/portal/webhooks/paystack`
 - PayPal: `https://apply.migrzz.com/api/portal/webhooks/paypal`
 - Required PayPal event: `PAYMENT.CAPTURE.COMPLETED`
+- Calendly: `https://apply.migrzz.com/api/portal/webhooks/calendly`
+- Required Calendly events: `invitee.created` and `invitee.canceled`
+
+## Review-call scheduling
+
+Create one 60-minute Calendly event type for Migrz review calls and configure
+its location to generate a unique Google Meet conference. Store that event
+type's URI in `CALENDLY_EVENT_TYPE_URI`. When the three Calendly values are
+present, applicants see live availability and receive an immediate confirmed
+booking. If Calendly is unavailable or not configured, the existing preferred
+time request remains available and administrators can confirm it manually.
+
+The applicant action changes with the call lifecycle: confirmation details are
+shown before the call, `Join review call` is used near the appointment, and
+`Review next steps` replaces the meeting action after completion. Staff must
+write an applicant-facing outcome before selecting `Call completed`. That
+transition creates an in-portal notification and sends a ZeptoMail service
+email; failed completion emails are retried by the five-minute Worker schedule.
 
 Use sandbox/test credentials first. Complete a Standard and Accelerated test
 purchase through each provider, confirm one entitlement is created per

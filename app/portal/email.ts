@@ -40,4 +40,14 @@ export function appointmentEmail(publicId: string, heading: string, detail: stri
   };
 }
 
+export function callCompletedEmail(applicationPublicId: string, appointmentPublicId: string, nextSteps = "") {
+  const portalUrl = "https://apply.migrzz.com/";
+  const detail = nextSteps.trim() || "Your Migrz adviser is preparing the written follow-up and any agreed next actions. You can follow progress in your secure portal.";
+  return {
+    subject: `Your Migrz review call is complete — ${applicationPublicId}`,
+    text: `Your Migrz review call is complete.\n\nAssessment: ${applicationPublicId}\nCall reference: ${appointmentPublicId}\n\n${detail}\n\nView your next steps: ${portalUrl}`,
+    html: `<div style="font-family:Arial,sans-serif;color:#172333;max-width:600px;margin:auto"><h1 style="color:#10233f">MIGRZ</h1><h2>Your review call is complete.</h2><p>Thank you for meeting with the Migrz team.</p><p><strong>Assessment:</strong> ${escapeHtml(applicationPublicId)}<br><strong>Call reference:</strong> ${escapeHtml(appointmentPublicId)}</p><p>${escapeHtml(detail)}</p><p><a href="${portalUrl}" style="display:inline-block;padding:13px 18px;background:#10233f;color:#fff;text-decoration:none;border-radius:6px">View your next steps</a></p><p style="color:#66788c;font-size:12px">This is a service notification about your Migrz assessment.</p></div>`,
+  };
+}
+
 function escapeHtml(value: string) { return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] || character); }
