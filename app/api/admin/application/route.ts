@@ -1,0 +1,27 @@
+import { audit, json, portalEnv, randomId, requireAdmin } from "@/app/portal/server";
+
+const reviewStatuses = ["submitted", "in_review", "needs_information", "completed", "closed"] as const;
+
+async function findApplication(publicId: string) {
+  return portalEnv.DB.prepare(`SELECT a.id,a.public_id AS publicId,a.status,a.review_status AS reviewStatus,a.current_section AS currentSection,a.answers_json AS answersJson,a.submitted_at AS submittedAt,a.updated_at AS updatedAt,a.admin_updated_at AS adminUpdatedAt,u.email,u.country_residence AS countryResidence,e.plan,ad.email AS assignedTo FROM applications a JOIN users u ON u.id=a.user_id LEFT JOIN entitlements e ON e.user_id=u.id AND e.status='active' LEFT JOIN admins aa ON aa.id=a.assigned_admin_id LEFT JOIN users ad ON ad.id=aa.user_id WHERE a.public_id=? LIMIT 1`).bind(publicId).first<{ id: string; publicId: string; status: string; reviewStatus: string; currentSection: number; answersJson: string; submittedAt: number | null; updatedAt: number; adminUpdatedAt: number | null; email: string; countryResidence: string; plan: string | null; assignedTo: string | null }>();
+}
+
+export async function GET(request: Request) {
+  const session = await requireAdmin(request); if (session.error || !session.user) return session.error!; const publicId = new URL(request.url).searchParams.get("id") || ""; const application = await findApplication(publicId); if (!application) return json({ error: "Application not found" }, 404);
+  const [notes, documents, payments] = await Promise.all([
+    portalEnv.DB.prepare(`SELECT n.id,n.note,n.created_at AS createdAt,u.email AS authorEmail FROM application_notes n JOIN users u ON u.id=n.admin_user_id WHERE n.application_id=? ORDER BY n.created_at DESC`).bind(application.id).all(),
+    portalEnv.DB.prepare(`SELECT id,file_name AS fileName,content_type AS contentType,size,status,created_at AS createdAt FROM documents WHERE application_id=? AND status!='deleted' ORDER BY created_at DESC`).bind(application.id).all(),
+    portalEnv.DB.prepare(`SELECT id,plan,provider,amount_minor AS amountMinor,currency,status,provider_reference AS providerReference,created_at AS createdAt,paid_at AS paidAt FROM payments WHERE user_id=(SELECT user_id FROM applications WHERE id=?) ORDER BY created_at DESC`).bind(application.id).all(),
+  ]);
+  return json({ application: { ...application, answers: JSON.parse(application.answersJson || "{}"), answersJson: undefined }, notes: notes.results, documents: documents.results, payments: payments.results });
+}
+
+export async function PATCH(request: Request) {
+  const session = await requireAdmin(request); if (session.error || !session.user) return session.error!; const body = await request.json() as { publicId?: unknown; reviewStatus?: unknown; assignedAdminId?: unknown }; const publicId = typeof body.publicId === "string" ? body.publicId : ""; const application = await findApplication(publicId); if (!application) return json({ error: "Application not found" }, 404); if (typeof body.reviewStatus !== "string" || !reviewStatuses.includes(body.reviewStatus as typeof reviewStatuses[number])) return json({ error: "Invalid review status" }, 400);
+  const assignedAdminId = typeof body.assignedAdminId === "string" && body.assignedAdminId ? body.assignedAdminId : null; if (assignedAdminId) { const admin = await portalEnv.DB.prepare("SELECT id FROM admins WHERE id=? AND status='active'").bind(assignedAdminId).first(); if (!admin) return json({ error: "Invalid assignee" }, 400); }
+  const now = Date.now(); await portalEnv.DB.prepare("UPDATE applications SET review_status=?,assigned_admin_id=?,admin_updated_at=?,updated_at=? WHERE id=?").bind(body.reviewStatus, assignedAdminId, now, now, application.id).run(); await audit("application_review_updated", "application", application.id, session.user.id, { publicId, reviewStatus: body.reviewStatus, assignedAdminId }); return json({ ok: true, updatedAt: now });
+}
+
+export async function POST(request: Request) {
+  const session = await requireAdmin(request); if (session.error || !session.user) return session.error!; const body = await request.json() as { publicId?: unknown; note?: unknown }; const publicId = typeof body.publicId === "string" ? body.publicId : ""; const note = typeof body.note === "string" ? body.note.trim().slice(0, 4000) : ""; if (!note) return json({ error: "Write a note before saving" }, 400); const application = await findApplication(publicId); if (!application) return json({ error: "Application not found" }, 404); const noteId = randomId("note_"); await portalEnv.DB.prepare("INSERT INTO application_notes (id,application_id,admin_user_id,note,created_at) VALUES (?,?,?,?,?)").bind(noteId, application.id, session.user.id, note, Date.now()).run(); await audit("application_note_added", "application", application.id, session.user.id, { publicId, noteId }); return json({ ok: true, noteId }, 201);
+}

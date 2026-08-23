@@ -1,0 +1,14 @@
+ALTER TABLE applications ADD COLUMN public_id TEXT;
+ALTER TABLE applications ADD COLUMN review_status TEXT NOT NULL DEFAULT 'draft';
+ALTER TABLE applications ADD COLUMN assigned_admin_id TEXT;
+ALTER TABLE applications ADD COLUMN admin_updated_at INTEGER;
+UPDATE applications SET public_id = 'MZ-2026-' || upper(substr(replace(id, 'app_', ''), 1, 8)) WHERE public_id IS NULL;
+UPDATE applications SET review_status = CASE WHEN status = 'submitted' THEN 'submitted' ELSE 'draft' END;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_public_id ON applications(public_id);
+CREATE INDEX IF NOT EXISTS idx_applications_review_status ON applications(review_status);
+CREATE TABLE IF NOT EXISTS admins (id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'admin', status TEXT NOT NULL DEFAULT 'active', created_at INTEGER NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_user ON admins(user_id);
+CREATE INDEX IF NOT EXISTS idx_admins_status ON admins(status);
+CREATE TABLE IF NOT EXISTS application_notes (id TEXT PRIMARY KEY NOT NULL, application_id TEXT NOT NULL, admin_user_id TEXT NOT NULL, note TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_application_notes_application_created ON application_notes(application_id, created_at);
+PRAGMA optimize;

@@ -35,9 +35,20 @@ export const entitlements = sqliteTable("entitlements", {
 
 export const applications = sqliteTable("applications", {
   id: text("id").primaryKey(), userId: text("user_id").notNull(), status: text("status").notNull(),
+  publicId: text("public_id"), reviewStatus: text("review_status").notNull().default("draft"), assignedAdminId: text("assigned_admin_id"),
   currentSection: integer("current_section").notNull().default(1), answersJson: text("answers_json").notNull().default("{}"),
-  createdAt: integer("created_at").notNull(), updatedAt: integer("updated_at").notNull(), submittedAt: integer("submitted_at"),
-}, (table) => [uniqueIndex("idx_applications_user").on(table.userId), index("idx_applications_status").on(table.status)]);
+  createdAt: integer("created_at").notNull(), updatedAt: integer("updated_at").notNull(), submittedAt: integer("submitted_at"), adminUpdatedAt: integer("admin_updated_at"),
+}, (table) => [uniqueIndex("idx_applications_user").on(table.userId), uniqueIndex("idx_applications_public_id").on(table.publicId), index("idx_applications_status").on(table.status), index("idx_applications_review_status").on(table.reviewStatus)]);
+
+export const admins = sqliteTable("admins", {
+  id: text("id").primaryKey(), userId: text("user_id").notNull(), role: text("role").notNull().default("admin"),
+  status: text("status").notNull().default("active"), createdAt: integer("created_at").notNull(),
+}, (table) => [uniqueIndex("idx_admins_user").on(table.userId), index("idx_admins_status").on(table.status)]);
+
+export const applicationNotes = sqliteTable("application_notes", {
+  id: text("id").primaryKey(), applicationId: text("application_id").notNull(), adminUserId: text("admin_user_id").notNull(),
+  note: text("note").notNull(), createdAt: integer("created_at").notNull(),
+}, (table) => [index("idx_application_notes_application_created").on(table.applicationId, table.createdAt)]);
 
 export const documents = sqliteTable("documents", {
   id: text("id").primaryKey(), userId: text("user_id").notNull(), applicationId: text("application_id").notNull(),

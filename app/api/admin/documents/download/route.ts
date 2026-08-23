@@ -1,0 +1,5 @@
+import { portalEnv, requireAdmin } from "@/app/portal/server";
+
+export async function GET(request: Request) {
+  const session = await requireAdmin(request); if (session.error || !session.user) return session.error!; const id = new URL(request.url).searchParams.get("id") || ""; const document = await portalEnv.DB.prepare("SELECT r2_key AS r2Key,file_name AS fileName,content_type AS contentType FROM documents WHERE id=? AND status='stored' LIMIT 1").bind(id).first<{ r2Key: string; fileName: string; contentType: string }>(); if (!document) return new Response("Not found", { status: 404 }); const object = await portalEnv.DOCUMENTS.get(document.r2Key); if (!object) return new Response("Not found", { status: 404 }); const safeName = document.fileName.replace(/[\r\n"\\]/g, "_"); return new Response(object.body, { headers: { "content-type": document.contentType, "content-disposition": `attachment; filename="${safeName}"`, "cache-control": "private, no-store", "x-content-type-options": "nosniff" } });
+}

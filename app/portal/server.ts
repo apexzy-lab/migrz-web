@@ -43,6 +43,7 @@ export function providerForCountry(country: string): ProviderId { return country
 
 function bytesToHex(bytes: Uint8Array) { return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join(""); }
 export function randomId(prefix = "") { const bytes = crypto.getRandomValues(new Uint8Array(18)); return `${prefix}${bytesToHex(bytes)}`; }
+export function submissionPublicId() { return `MZ-${new Date().getUTCFullYear()}-${randomId().slice(0, 8).toUpperCase()}`; }
 export function randomCode() { const value = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000; return value.toString().padStart(6, "0"); }
 export async function sha256(value: string) { return bytesToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)))); }
 export async function hmacHex(value: string, secret: string, algorithm: "SHA-256" | "SHA-512" = "SHA-256") {
@@ -69,14 +70,22 @@ export async function getSessionUser(request: Request) {
   const tokenHash = await sha256(token); const now = Date.now();
   return portalEnv.DB.prepare(`SELECT u.id, u.email, u.country_residence AS countryResidence, u.preferred_plan AS preferredPlan,
     EXISTS(SELECT 1 FROM entitlements e WHERE e.user_id=u.id AND e.status='active') AS paid,
-    (SELECT e.plan FROM entitlements e WHERE e.user_id=u.id AND e.status='active' ORDER BY e.activated_at DESC LIMIT 1) AS paidPlan
-    FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>? LIMIT 1`).bind(tokenHash, now).first<{ id: string; email: string; countryResidence: string; preferredPlan: PlanId; paid: number; paidPlan: PlanId | null }>();
+    (SELECT e.plan FROM entitlements e WHERE e.user_id=u.id AND e.status='active' ORDER BY e.activated_at DESC LIMIT 1) AS paidPlan,
+    EXISTS(SELECT 1 FROM admins a WHERE a.user_id=u.id AND a.status='active') AS admin
+    FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>? LIMIT 1`).bind(tokenHash, now).first<{ id: string; email: string; countryResidence: string; preferredPlan: PlanId; paid: number; paidPlan: PlanId | null; admin: number }>();
 }
 
 export async function requireSession(request: Request, paid = false) {
   const user = await getSessionUser(request);
   if (!user) return { error: json({ error: "Sign in required" }, 401), user: null };
   if (paid && !user.paid) return { error: json({ error: "Payment required" }, 402), user: null };
+  return { error: null, user };
+}
+
+export async function requireAdmin(request: Request) {
+  const user = await getSessionUser(request);
+  if (!user) return { error: json({ error: "Sign in required" }, 401), user: null };
+  if (!user.admin) return { error: json({ error: "Administrator access required" }, 403), user: null };
   return { error: null, user };
 }
 
@@ -158,7 +167,7 @@ export async function activatePayment(paymentId: string, providerReference: stri
   await portalEnv.DB.batch([
     portalEnv.DB.prepare("UPDATE payments SET status='paid',provider_reference=?,paid_at=?,updated_at=? WHERE id=? AND status!='paid'").bind(providerReference, now, now, paymentId),
     portalEnv.DB.prepare("INSERT OR IGNORE INTO entitlements (id,user_id,payment_id,plan,status,activated_at) VALUES (?,?,?,?,?,?)").bind(randomId("ent_"), payment.userId, paymentId, payment.plan, "active", now),
-    portalEnv.DB.prepare("INSERT OR IGNORE INTO applications (id,user_id,status,current_section,answers_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?)").bind(randomId("app_"), payment.userId, "draft", 1, "{}", now, now),
+    portalEnv.DB.prepare("INSERT OR IGNORE INTO applications (id,user_id,public_id,status,review_status,current_section,answers_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(randomId("app_"), payment.userId, submissionPublicId(), "draft", "draft", 1, "{}", now, now),
   ]);
   await audit("payment_activated", "payment", paymentId, payment.userId, { providerReference, plan: payment.plan });
 }

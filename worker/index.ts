@@ -39,6 +39,10 @@ const worker = {
       return Response.redirect("https://apply.migrzz.com/", 302);
     }
 
+    if (url.hostname === "migrzz.com" && url.pathname.startsWith("/admin")) {
+      return Response.redirect(`https://apply.migrzz.com${url.pathname}${url.search}`, 302);
+    }
+
     // Keep one canonical hostname after the WordPress-to-Worker cutover.
     if (url.hostname === "www.migrzz.com") {
       url.hostname = "migrzz.com";
