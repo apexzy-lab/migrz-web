@@ -26,6 +26,8 @@ const steps = [
 function Arrow() { return <span aria-hidden="true">→</span>; }
 
 type PortalSession = { loaded: boolean; authenticated: boolean; user: null | { email: string; countryResidence: string; preferredPlan: "standard" | "accelerated"; paid: boolean; paidPlan: "standard" | "accelerated" | null; admin: boolean }; integrations: { email: boolean; paystack: boolean; paypal: boolean; wise: boolean } };
+type PortalApplicationSummary = { status?: string; reviewStatus?: string; publicId?: string; currentSection?: number; submittedAt?: number | null; answers?: Partial<AssessmentAnswers> };
+type ApplicationState = { loaded: boolean; error: boolean; application: PortalApplicationSummary | null };
 
 export function PortalClient() {
   const [session, setSession] = useState<PortalSession>({ loaded: false, authenticated: false, user: null, integrations: { email: false, paystack: false, paypal: false, wise: false } });
@@ -67,10 +69,16 @@ function PortalCheckout({ user, integrations, onSignOut }: { user: NonNullable<P
 function PaidPortal({ user, onSignOut }: { user: { email: string; paidPlan: "standard" | "accelerated" | null; admin: boolean }; onSignOut: () => Promise<void> }) {
   const [view, setView] = useState<View>("home");
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [applicationState, setApplicationState] = useState<ApplicationState>({ loaded: false, error: false, application: null });
+  const refreshApplication = useCallback(async () => { try { const response = await fetch("/api/portal/application", { cache: "no-store" }); const data = await response.json() as { application?: PortalApplicationSummary | null }; if (!response.ok) return setApplicationState((current) => ({ ...current, loaded: true, error: true })); setApplicationState({ loaded: true, error: false, application: data.application || null }); } catch { setApplicationState((current) => ({ ...current, loaded: true, error: true })); } }, []);
+  // Keep all applicant views synchronized with the same server-side record.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void refreshApplication(); const refreshOnFocus = () => void refreshApplication(); window.addEventListener("focus", refreshOnFocus); return () => window.removeEventListener("focus", refreshOnFocus); }, [refreshApplication]);
 
   const selectView = (next: View) => {
     setView(next);
     setMobileMenu(false);
+    if (next === "home" || next === "assessment") void refreshApplication();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -100,8 +108,8 @@ function PaidPortal({ user, onSignOut }: { user: { email: string; paidPlan: "sta
       </header>
 
       <main className="portal-main" id="main">
-        {view === "home" && <Dashboard onContinue={() => selectView("assessment")} onHelp={() => selectView("help")} />}
-        {view === "assessment" && <Assessment />}
+        {view === "home" && <Dashboard state={applicationState} onRefresh={refreshApplication} onContinue={() => selectView("assessment")} onHelp={() => selectView("help")} />}
+        {view === "assessment" && <Assessment onApplicationChanged={refreshApplication} />}
         {view === "documents" && <Documents />}
         {view === "payment" && <Payment />}
         {view === "help" && <Help />}
@@ -114,30 +122,30 @@ function PaidPortal({ user, onSignOut }: { user: { email: string; paidPlan: "sta
   </div>;
 }
 
-function Dashboard({ onContinue, onHelp }: { onContinue: () => void; onHelp: () => void }) {
-  const [application, setApplication] = useState<{ status?: string; reviewStatus?: string; publicId?: string; currentSection?: number } | null>(null);
-  useEffect(() => { void (async () => { const response = await fetch("/api/portal/application", { cache: "no-store" }); const data = await response.json() as { application?: { status?: string; reviewStatus?: string; publicId?: string; currentSection?: number } }; if (response.ok) setApplication(data.application || null); })(); }, []);
-  const submitted = application?.status === "submitted";
+function Dashboard({ state, onRefresh, onContinue, onHelp }: { state: ApplicationState; onRefresh: () => Promise<void>; onContinue: () => void; onHelp: () => void }) {
+  if (!state.loaded) return <DashboardStatus title="Checking your assessment status…" copy="We’re reading the latest application record from your secure workspace." />;
+  if (state.error) return <DashboardStatus title="We couldn’t load your current status." copy="Your assessment record has not been changed. Try the secure status check again." action="Check status again" onAction={() => void onRefresh()} />;
+  const application = state.application; const submitted = application?.status === "submitted"; const started = !submitted && Boolean(application && Object.values(application.answers || {}).some((value) => typeof value === "string" && value.trim())); const stage = submitted ? "submitted" : started ? "in_progress" : "not_started"; const progress = submitted ? 100 : started ? Math.min(90, Math.max(20, (application?.currentSection || 1) * 25)) : 0;
   return <div className="portal-dashboard">
     <section className="portal-welcome">
-      <div><span className="portal-eyebrow">Your Migrz assessment</span><h1>{submitted ? <>Submitted for<br /><em>professional review.</em></> : <>Complete your<br /><em>professional assessment.</em></>}</h1><p>{submitted ? `Your record ${application?.publicId || ""} is safely submitted. Follow its review status here while the Migrz team prepares a response.` : "Tell us about your background and achievements so our team can assess the immigration pathways that may fit your record."}</p><button className="portal-primary" onClick={onContinue}>{submitted ? "View submission status" : "Continue assessment"} <Arrow /></button></div>
-      <div className="portal-progress-orbit" aria-label={submitted ? "Submission complete" : "Assessment in progress"}><strong>{submitted ? "100%" : `${Math.max(25, (application?.currentSection || 1) * 25)}%`}</strong><span>{submitted ? "Submitted" : "Overall progress"}</span></div>
+      <div><span className="portal-eyebrow">Your Migrz assessment</span><h1>{submitted ? <>Submitted for<br /><em>professional review.</em></> : started ? <>Continue your<br /><em>professional assessment.</em></> : <>Start your<br /><em>professional assessment.</em></>}</h1><p>{submitted ? `Your record ${application?.publicId || ""} is safely submitted. Follow its review status here while the Migrz team prepares a response.` : started ? "Your assessment is in progress and securely saved. Continue from your latest completed step." : "Your payment is verified and the assessment is ready. Add your background, destination, achievements, and supporting evidence when you are ready."}</p><button className="portal-primary" onClick={onContinue}>{submitted ? "View submission status" : started ? "Continue assessment" : "Start assessment"} <Arrow /></button></div>
+      <div className="portal-progress-orbit" aria-label={submitted ? "Submission complete" : started ? "Assessment in progress" : "Assessment not started"}><strong>{progress}%</strong><span>{submitted ? "Submitted" : started ? "In progress" : "Not started"}</span></div>
     </section>
 
-    <Journey submitted={submitted} reviewStatus={application?.reviewStatus} />
+    <Journey stage={stage} reviewStatus={application?.reviewStatus} />
 
     <div className="portal-dashboard-grid">
       <section className="portal-continue-card">
-        <span className="portal-eyebrow">{submitted ? "Review tracker" : "Continue where you left off"}</span>
-        <div className="portal-task-title"><span aria-hidden="true">{submitted ? "✓" : "03"}</span><div><strong>{submitted ? statusLabelsForApplicant(application?.reviewStatus) : "Add your information"}</strong><p>{submitted ? `Submission ${application?.publicId || ""} is in the Migrz operations queue.` : "Build a clear record of your experience, achievements and professional impact."}</p></div></div>
-        <div className="portal-task-meta"><span>{submitted ? "We will contact your registered email" : "Your answers save securely"}</span><span>{submitted ? "No further action unless requested" : `Step ${application?.currentSection || 1} of 4`}</span></div>
-        <div className="portal-task-progress" aria-label={submitted ? "Submission complete" : "Assessment progress"}><i style={{ width: submitted ? "100%" : `${Math.max(25, (application?.currentSection || 1) * 25)}%` }} /></div>
-        <button className="portal-primary" onClick={onContinue}>{submitted ? "View submission" : "Continue assessment"} <Arrow /></button>
+        <span className="portal-eyebrow">{submitted ? "Review tracker" : started ? "Continue where you left off" : "Ready when you are"}</span>
+        <div className="portal-task-title"><span aria-hidden="true">{submitted ? "✓" : "03"}</span><div><strong>{submitted ? statusLabelsForApplicant(application?.reviewStatus) : started ? "Assessment in progress" : "Assessment not started"}</strong><p>{submitted ? `Submission ${application?.publicId || ""} is in the Migrz operations queue.` : started ? "Your answers are saved. Continue adding your professional information and evidence." : "Begin with your personal details and preferred destination, then build your evidence record."}</p></div></div>
+        <div className="portal-task-meta"><span>{submitted ? "We will contact your registered email" : "Your answers save securely"}</span><span>{submitted ? "No further action unless requested" : started ? `Step ${application?.currentSection || 1} of 4` : "No answers submitted yet"}</span></div>
+        <div className="portal-task-progress" aria-label={submitted ? "Submission complete" : started ? "Assessment progress" : "Assessment not started"}><i style={{ width: `${progress}%` }} /></div>
+        <button className="portal-primary" onClick={onContinue}>{submitted ? "View submission" : started ? "Continue assessment" : "Start assessment"} <Arrow /></button>
       </section>
 
       <section className="portal-after-payment">
-        <span className="portal-eyebrow">Clear from the beginning</span><h2>What happens after payment?</h2>
-        <ol><li><span>1</span><p><strong>Migrz reviews your profile</strong><small>A person reviews your record—not an automated eligibility score.</small></p></li><li><span>2</span><p><strong>You receive a written pathway report</strong><small>Possible routes, evidence gaps, limitations and recommended next steps.</small></p></li><li><span>3</span><p><strong>You decide whether to engage us</strong><small>The assessment does not commit you to full application support.</small></p></li></ol>
+        <span className="portal-eyebrow">{submitted ? "After submission" : "Clear from the beginning"}</span><h2>{submitted ? "What happens while you wait?" : "What happens after payment?"}</h2>
+        <ol><li><span>1</span><p><strong>{submitted ? "Your record enters the review queue" : "Complete and submit your profile"}</strong><small>{submitted ? "A Migrz reviewer receives the answers and supporting evidence tied to your submission ID." : "Tell us about your record and add relevant evidence."}</small></p></li><li><span>2</span><p><strong>Migrz reviews your profile</strong><small>A person compares relevant pathways—not an automated eligibility score.</small></p></li><li><span>3</span><p><strong>You receive a written pathway report</strong><small>Possible routes, evidence gaps, limitations and recommended next steps.</small></p></li></ol>
       </section>
 
       <section className="portal-support-card">
@@ -147,10 +155,12 @@ function Dashboard({ onContinue, onHelp }: { onContinue: () => void; onHelp: () 
   </div>;
 }
 
+function DashboardStatus({ title, copy, action, onAction }: { title: string; copy: string; action?: string; onAction?: () => void }) { return <div className="portal-dashboard-state"><span className="portal-eyebrow">Secure assessment status</span><h1>{title}</h1><p>{copy}</p>{action && <button className="portal-primary" onClick={onAction}>{action} <Arrow /></button>}</div>; }
+
 function statusLabelsForApplicant(status?: string) { return status === "completed" ? "Assessment response ready" : status === "needs_information" ? "More information requested" : status === "in_review" ? "Professional review in progress" : "Awaiting Migrz review"; }
 
-function Journey({ submitted = false, reviewStatus = "draft" }: { submitted?: boolean; reviewStatus?: string } = {}) {
-  const journey = submitted ? steps.map((step, index) => index < 4 ? { ...step, status: "Complete", tone: "complete" } : { ...step, status: reviewStatus === "completed" ? "Complete" : statusLabelsForApplicant(reviewStatus), tone: reviewStatus === "completed" ? "complete" : "current" }) : steps;
+function Journey({ stage = "in_progress", reviewStatus = "draft" }: { stage?: "not_started" | "in_progress" | "submitted"; reviewStatus?: string } = {}) {
+  const journey = stage === "submitted" ? steps.map((step, index) => index < 4 ? { ...step, status: "Complete", tone: "complete" } : { ...step, status: reviewStatus === "completed" ? "Complete" : statusLabelsForApplicant(reviewStatus), tone: reviewStatus === "completed" ? "complete" : "current" }) : stage === "not_started" ? steps.map((step, index) => index < 2 ? step : index === 2 ? { ...step, status: "Ready to start", tone: "current" } : step) : steps;
   return <section className="portal-journey" aria-label="Assessment progress">
     {journey.map((step, index) => <div key={step.number} className={`portal-step is-${step.tone}`}><span>{step.tone === "complete" ? "✓" : step.number}</span><p><strong>{step.title}</strong><small>{step.status}</small></p>{index < journey.length - 1 && <i aria-hidden="true" />}</div>)}
   </section>;
@@ -193,12 +203,12 @@ function PaymentPreview() {
 type AssessmentAnswers = { fullName: string; countryResidence: string; preferredDestination: string; immigrationGoal: string; currentRole: string; experienceRange: string; achievement: string };
 const emptyAnswers: AssessmentAnswers = { fullName: "", countryResidence: "", preferredDestination: "", immigrationGoal: "", currentRole: "", experienceRange: "", achievement: "" };
 
-function Assessment() {
+function Assessment({ onApplicationChanged }: { onApplicationChanged?: () => Promise<void> }) {
   const [section, setSection] = useState(1); const [answers, setAnswers] = useState<AssessmentAnswers>(emptyAnswers); const [message, setMessage] = useState("Loading your saved assessment…"); const [busy, setBusy] = useState(false); const [applicationStatus, setApplicationStatus] = useState<"loading" | "draft" | "submitted">("loading"); const [reviewStatus, setReviewStatus] = useState("draft"); const [submittedAt, setSubmittedAt] = useState<number | null>(null); const [publicId, setPublicId] = useState(""); const sectionData = [{ title: "About you", copy: "Confirm the personal details and destination that help us understand your circumstances and timing." }, { title: "Career & evidence", copy: "Tell us what you have done, how your work mattered and what can verify it." }, { title: "Review your answers", copy: "Check your information before submitting it to the Migrz assessment team." }, { title: "Submit assessment", copy: "Submit your completed record for professional review." }];
   useEffect(() => { void (async () => { const response = await fetch("/api/portal/application", { cache: "no-store" }); const data = await response.json() as { application?: { currentSection?: number; answers?: Partial<AssessmentAnswers>; status?: string; reviewStatus?: string; submittedAt?: number | null; publicId?: string } }; if (response.ok && data.application) { setSection(Math.min(4, data.application.currentSection || 1)); setAnswers({ ...emptyAnswers, ...data.application.answers }); setApplicationStatus(data.application.status === "submitted" ? "submitted" : "draft"); setReviewStatus(data.application.reviewStatus || data.application.status || "draft"); setSubmittedAt(data.application.submittedAt || null); setPublicId(data.application.publicId || ""); setMessage(data.application.status === "submitted" ? "Assessment submitted." : "All changes are stored securely."); } else { setApplicationStatus("draft"); setMessage("Start with the questions below."); } })(); }, []);
   const update = (field: keyof AssessmentAnswers, value: string) => setAnswers((current) => ({ ...current, [field]: value }));
   const save = async (nextSection: number) => { setBusy(true); setMessage("Saving…"); const response = await fetch("/api/portal/application", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ currentSection: nextSection, answers }) }); const data = await response.json() as { error?: string }; setBusy(false); if (!response.ok) return setMessage(data.error || "Unable to save."); setMessage("All changes saved."); setSection(nextSection); };
-  const submit = async () => { setBusy(true); setMessage("Submitting…"); const saved = await fetch("/api/portal/application", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ currentSection: 4, answers }) }); if (!saved.ok) { const data = await saved.json() as { error?: string }; setBusy(false); return setMessage(data.error || "Unable to save."); } const response = await fetch("/api/portal/application", { method: "POST" }); const data = await response.json() as { error?: string; submittedAt?: number; publicId?: string }; setBusy(false); if (!response.ok) return setMessage(data.error || "Unable to submit."); setSubmittedAt(data.submittedAt || Date.now()); setPublicId(data.publicId || publicId); setReviewStatus("submitted"); setApplicationStatus("submitted"); setMessage("Assessment submitted to Migrz."); };
+  const submit = async () => { setBusy(true); setMessage("Submitting…"); const saved = await fetch("/api/portal/application", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ currentSection: 4, answers }) }); if (!saved.ok) { const data = await saved.json() as { error?: string }; setBusy(false); return setMessage(data.error || "Unable to save."); } const response = await fetch("/api/portal/application", { method: "POST" }); const data = await response.json() as { error?: string; submittedAt?: number; publicId?: string }; setBusy(false); if (!response.ok) return setMessage(data.error || "Unable to submit."); setSubmittedAt(data.submittedAt || Date.now()); setPublicId(data.publicId || publicId); setReviewStatus("submitted"); setApplicationStatus("submitted"); setMessage("Assessment submitted to Migrz."); if (onApplicationChanged) void onApplicationChanged(); };
   if (applicationStatus === "submitted") return <div className="portal-subpage portal-submitted"><header><span className="portal-eyebrow">Assessment received</span><h1>Your assessment is with Migrz.</h1><p>Your answers are locked and safely submitted. The Migrz team can now review your professional record and supporting evidence.</p></header><section className="portal-submission-reference"><span>Submission ID</span><strong>{publicId || "Being assigned"}</strong><small>Keep this reference for any communication with the Migrz team.</small></section><section className="portal-submitted-card"><span className="portal-submitted-check" aria-hidden="true">✓</span><div><span className="portal-eyebrow">{reviewStatus === "completed" ? "Assessment response ready" : reviewStatus === "in_review" ? "Professional review in progress" : reviewStatus === "needs_information" ? "More information requested" : "Awaiting professional review"}</span><h2>{reviewStatus === "completed" ? "Review completed" : "Submission complete"}</h2><p>{reviewStatus === "needs_information" ? "The Migrz team needs additional information before completing the assessment. Check your registered email for the request." : "There is nothing else you need to submit here unless the team asks for clarification. You may continue adding relevant documents while your assessment is awaiting review."}</p>{submittedAt && <small>Received {new Date(submittedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</small>}</div><div className="portal-submitted-next"><strong>What happens next</strong><ol><li>Migrz reviews your answers and evidence.</li><li>The team compares supported destination pathways.</li><li>You receive the assessment response through your registered email.</li></ol></div></section></div>;
   const current = sectionData[section - 1];
   return <div className="portal-subpage"><header><span className="portal-eyebrow">My assessment</span><h1>{current.title}</h1><p>{current.copy}</p></header><Journey /><div className="portal-form-layout"><aside><strong>Paid assessment</strong><p>Your draft is saved to your secure account.</p><div><i style={{ width: `${section * 25}%` }} /></div><small>Step {section} of 4</small></aside><form onSubmit={(event) => { event.preventDefault(); if (section === 4) void submit(); else void save(Math.min(4, section + 1)); }}>
