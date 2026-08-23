@@ -1,12 +1,8 @@
 import vinext from "vinext";
 import { defineConfig } from "vite";
-import hostingConfig from "./.openai/hosting.json";
 import { sites } from "./build/sites-vite-plugin";
 
-const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
-  "00000000-0000-4000-8000-000000000000";
-
-const { d1, r2 } = hostingConfig;
+const MIGRZ_APPLICATIONS_DATABASE_ID = "1149148f-0bb2-4a4b-bb58-df7c28fd3f63";
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
@@ -14,6 +10,7 @@ const productionRoutes = process.env.MIGRZ_ENABLE_CUSTOM_DOMAINS === "1"
   ? [
       { pattern: "migrzz.com/*", zone_name: "migrzz.com" },
       { pattern: "www.migrzz.com/*", zone_name: "migrzz.com" },
+      { pattern: "apply.migrzz.com", custom_domain: true },
     ]
   : [];
 
@@ -24,23 +21,8 @@ const localBindingConfig = {
   compatibility_flags: ["nodejs_compat"],
   routes: productionRoutes,
   workers_dev: true,
-  d1_databases: d1
-    ? [
-        {
-          binding: d1,
-          database_name: "site-creator-d1",
-          database_id: SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
-        },
-      ]
-    : [],
-  r2_buckets: r2
-    ? [
-        {
-          binding: r2,
-          bucket_name: "site-creator-r2",
-        },
-      ]
-    : [],
+  d1_databases: [{ binding: "DB", database_name: "migrz-applications", database_id: MIGRZ_APPLICATIONS_DATABASE_ID }],
+  r2_buckets: [{ binding: "DOCUMENTS", bucket_name: "migrz-applicant-documents" }],
 };
 
 export default defineConfig(async () => {
