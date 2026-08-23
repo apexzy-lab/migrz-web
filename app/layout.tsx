@@ -34,7 +34,7 @@ gtag('consent', 'default', {
 });
 gtag('js', new Date());
 gtag('config', 'G-8X3PLHV88L', {
-  linker: { domains: ['migrzz.com', 'forms.migrzz.com'] },
+  linker: { domains: ['migrzz.com', 'apply.migrzz.com'] },
   allow_google_signals: migrzConsent === 'granted'
 });`;
 
