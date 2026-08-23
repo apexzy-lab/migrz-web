@@ -115,7 +115,7 @@ export async function sendLoginCode(email: string, code: string) {
 }
 
 export function integrationStatus() {
-  return { email: Boolean(portalEnv.ZEPTOMAIL_TOKEN && portalEnv.SESSION_SECRET), paystack: Boolean(portalEnv.PAYSTACK_SECRET_KEY), paypal: Boolean(portalEnv.PAYPAL_CLIENT_ID && portalEnv.PAYPAL_CLIENT_SECRET && portalEnv.PAYPAL_WEBHOOK_ID), wise: Boolean(portalEnv.WISE_API_TOKEN), calendly: Boolean(portalEnv.CALENDLY_API_TOKEN && portalEnv.CALENDLY_EVENT_TYPE_URI) };
+  return { email: Boolean(portalEnv.ZEPTOMAIL_TOKEN && portalEnv.SESSION_SECRET), paystack: Boolean(portalEnv.PAYSTACK_SECRET_KEY), paypal: Boolean(portalEnv.PAYPAL_CLIENT_ID && portalEnv.PAYPAL_CLIENT_SECRET && portalEnv.PAYPAL_WEBHOOK_ID), wise: Boolean(portalEnv.WISE_API_TOKEN), calendly: Boolean(portalEnv.CALENDLY_API_TOKEN) };
 }
 
 export async function createNotification(userId: string, type: string, title: string, message: string, actionLabel?: string, actionView?: string, entityType?: string, entityId?: string) {

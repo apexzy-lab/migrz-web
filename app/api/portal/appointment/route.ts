@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   if (!timezone) return json({ error: "Your timezone is required." }, 400);
   const existing = await current(session.user.id); if (existing && !["requested", "cancelled"].includes(existing.status)) return json({ error: "This appointment is already being managed by Migrz." }, 409);
   const appointmentId = existing?.id || randomId("apt_"); const publicId = existing?.publicId || `CALL-${new Date().getUTCFullYear()}-${randomId().slice(0, 8).toUpperCase()}`;
-  const useCalendly = body.bookingMode === "calendly" && Boolean(portalEnv.CALENDLY_API_TOKEN && portalEnv.CALENDLY_EVENT_TYPE_URI);
+  const useCalendly = body.bookingMode === "calendly" && Boolean(portalEnv.CALENDLY_API_TOKEN);
   let booking: Awaited<ReturnType<typeof scheduleCalendlyInvitee>> | null = null;
   if (useCalendly) {
     const answers = JSON.parse(application.answersJson || "{}") as { fullName?: string };

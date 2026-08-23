@@ -30,8 +30,6 @@ control or a local committed environment file.
 - `PAYPAL_CLIENT_SECRET`
 - `PAYPAL_WEBHOOK_ID`
 - `CALENDLY_API_TOKEN`
-- `CALENDLY_EVENT_TYPE_URI`
-- `CALENDLY_WEBHOOK_SIGNING_KEY`
 
 Optional Worker variables:
 
@@ -53,12 +51,15 @@ Optional Worker variables:
 
 ## Review-call scheduling
 
-Create one 60-minute Calendly event type for Migrz review calls and configure
-its location to generate a unique Google Meet conference. Store that event
-type's URI in `CALENDLY_EVENT_TYPE_URI`. When the three Calendly values are
-present, applicants see live availability and receive an immediate confirmed
-booking. If Calendly is unavailable or not configured, the existing preferred
-time request remains available and administrators can confirm it manually.
+Create one active 60-minute Calendly event type for Migrz review calls, include
+`Migrz` and either `assessment` or `review` in its name, and configure its
+location to generate a unique Google Meet conference. The portal discovers its
+API URI automatically from `CALENDLY_API_TOKEN`. `CALENDLY_EVENT_TYPE_URI` is
+an optional override only when several active 60-minute event types could match.
+The first live booking securely creates the user-scoped webhook subscription;
+no separate webhook signing secret is required for this single-account setup.
+If Calendly is unavailable, the existing preferred-time request remains
+available and administrators can confirm it manually.
 
 The applicant action changes with the call lifecycle: confirmation details are
 shown before the call, `Join review call` is used near the appointment, and

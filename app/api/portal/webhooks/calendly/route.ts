@@ -1,9 +1,9 @@
-import { calendlyWebhookSignatureIsValid } from "@/app/portal/calendly";
+import { calendlyWebhookRequestIsValid } from "@/app/portal/calendly";
 import { audit, createNotification, json, portalEnv } from "@/app/portal/server";
 
 export async function POST(request: Request) {
-  const rawBody = await request.text(); const signature = request.headers.get("calendly-webhook-signature") || "";
-  if (!(await calendlyWebhookSignatureIsValid(rawBody, signature))) return json({ error: "Invalid signature" }, 401);
+  const rawBody = await request.text();
+  if (!(await calendlyWebhookRequestIsValid(request, rawBody))) return json({ error: "Invalid signature" }, 401);
   const body = JSON.parse(rawBody) as { event?: string; payload?: { uri?: string; event?: string; status?: string; rescheduled?: boolean; old_invitee?: string; new_invitee?: string; cancellation?: { reason?: string }; scheduled_event?: { uri?: string; start_time?: string; location?: { join_url?: string; location?: string } } } };
   const inviteeUri = body.payload?.uri || ""; if (!inviteeUri) return json({ ok: true });
   const lookupUri = body.event === "invitee.created" && body.payload?.old_invitee ? body.payload.old_invitee : inviteeUri;
