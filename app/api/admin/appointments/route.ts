@@ -1,5 +1,5 @@
 import { appointmentEmail, callCompletedEmail, sendPortalEmail } from "@/app/portal/email";
-import { calendlyErrorCode, scheduleCalendlyInvitee } from "@/app/portal/calendly";
+import { CalendlyApiError, calendlyErrorCode, scheduleCalendlyInvitee } from "@/app/portal/calendly";
 import { audit, createNotification, json, portalEnv, requireAdmin } from "@/app/portal/server";
 
 const statuses = ["requested", "confirmed", "rescheduled", "completed", "cancelled", "no_show"];
@@ -15,7 +15,7 @@ export async function PATCH(request: Request) {
     if (record.providerEventUri) return json({ error: "This appointment is already connected to Calendly." }, 409);
     try {
       const answers = JSON.parse(record.answersJson || "{}") as { fullName?: string };
-      const booking = await scheduleCalendlyInvitee({ startTime: new Date(record.requestedStart).toISOString(), email: record.email, name: answers.fullName || record.email, timezone: record.timezone, userId: record.userId });
+      const booking = await scheduleCalendlyInvitee({ startTime: new Date(record.requestedStart).toISOString(), email: record.email, name: answers.fullName || record.email, timezone: record.timezone, userId: record.userId, trackingId: record.applicationPublicId });
       const confirmed = new Date(booking.startTime).getTime(); const now = Date.now();
       await portalEnv.DB.prepare("UPDATE appointment_requests SET status='confirmed',confirmed_start=?,meeting_url=?,provider='calendly',provider_event_uri=?,provider_invitee_uri=?,cancel_url=?,reschedule_url=?,updated_at=? WHERE id=?").bind(confirmed, booking.meetingUrl || null, booking.eventUri, booking.inviteeUri, booking.cancelUrl, booking.rescheduleUrl, now, id).run();
       await createNotification(record.userId, "call_confirmed", "Your review call is confirmed", "Your Calendly booking and joining details are now available in the appointment area.", "View call details", "appointment", "appointment", id);
@@ -24,8 +24,14 @@ export async function PATCH(request: Request) {
       await audit("appointment_calendly_synced", "appointment", id, session.user.id, { publicId: record.publicId, confirmedStart: confirmed });
       return json({ ok: true, meetingUrl: booking.meetingUrl, status: "confirmed" });
     } catch (error) {
-      const providerCode = calendlyErrorCode(error); await audit("appointment_calendly_sync_failed", "appointment", id, session.user.id, { publicId: record.publicId, providerCode });
-      return json({ error: providerCode === "provider_429" ? "Calendly is still rate limiting bookings. Wait briefly and retry." : "Calendly could not create this meeting. Check the event type, account plan and token permissions, then retry.", providerCode }, 502);
+      const providerCode = calendlyErrorCode(error); const retryAfterSeconds = error instanceof CalendlyApiError ? error.retryAfterSeconds : null; const providerBookingUrl = error instanceof CalendlyApiError ? error.hostedBookingUrl : undefined;
+      await audit("appointment_calendly_sync_failed", "appointment", id, session.user.id, { publicId: record.publicId, providerCode, retryAfterSeconds });
+      if (providerBookingUrl) {
+        await portalEnv.DB.prepare("UPDATE appointment_requests SET status='requested',provider='calendly_hosted',provider_booking_url=?,updated_at=? WHERE id=?").bind(providerBookingUrl, Date.now(), id).run();
+        await createNotification(record.userId, "call_booking_ready", "Choose your review call time", "Calendly is ready for you to complete the booking. Your calendar invitation and joining details will be created automatically.", "Choose a time", "appointment", "appointment", id);
+        return json({ ok: true, warning: "Calendly's direct-booking API is unavailable, so the applicant now has a secure Calendly booking button. No manual meeting link is required.", providerCode, providerBookingUrl });
+      }
+      return json({ error: providerCode === "provider_429" ? `Calendly has paused direct bookings${retryAfterSeconds ? ` for about ${retryAfterSeconds} seconds` : ""}. The applicant booking link could not be generated.` : "Calendly could not create this meeting. Check the event type, account plan and token permissions, then retry.", providerCode }, 502);
     }
   }
   if (!statuses.includes(status)) return json({ error: "Invalid appointment update." }, 400);

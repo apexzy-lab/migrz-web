@@ -16,12 +16,16 @@ test("Calendly booking uses signed slots, retries rate limits and supports admin
   assert.match(calendar, /response\.status === 429/);
   assert.match(calendar, /\.\.\.\(location \? \{ location \} : \{\}\)/);
   assert.match(calendar, /calendlyErrorCode/);
+  assert.match(calendar, /integration_cache/);
+  assert.match(calendar, /hostedBookingUrl/);
   assert.match(availability, /session\.user\.id/);
   assert.match(appointment, /appointment_booking_failed/);
   assert.match(appointment, /bookingFallback: Boolean\(useCalendly && !booking\)/);
-  assert.doesNotMatch(appointment, /That live slot is no longer available/);
+  assert.match(appointment, /refreshSlots: true/);
+  assert.match(appointment, /provider_booking_url/);
   assert.match(adminAppointment, /appointment_calendly_synced/);
   assert.match(adminAppointment, /shouldSyncCalendly/);
   assert.match(client, /slotTokens\[requestedStart\]/);
-  assert.match(client, /Calendly could not confirm instantly/);
+  assert.match(client, /Complete the booking securely in Calendly/);
+  assert.match(client, /Choose time in Calendly/);
 });
