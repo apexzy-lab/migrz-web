@@ -8,14 +8,35 @@ async function calendlyFetch(path: string, init?: RequestInit) {
     ...init,
     headers: { Authorization: `Bearer ${portalEnv.CALENDLY_API_TOKEN}`, "content-type": "application/json", ...init?.headers },
   });
-  if (!response.ok) throw new Error(`CALENDLY_${response.status}_${(await response.text()).slice(0, 180)}`);
+  if (!response.ok) throw new CalendlyApiError(response.status, (await response.text()).slice(0, 500));
   return response.json() as Promise<Record<string, unknown>>;
+}
+
+export class CalendlyApiError extends Error {
+  constructor(public status: number, public providerDetail: string) {
+    super(`CALENDLY_${status}`);
+    this.name = "CalendlyApiError";
+  }
+}
+
+export function calendlyErrorCode(error: unknown) {
+  if (error instanceof CalendlyApiError) {
+    const detail = error.providerDetail.toLowerCase();
+    if (detail.includes("location")) return "location_invalid";
+    if (detail.includes("available") || detail.includes("start_time")) return "slot_unavailable";
+    if (error.status === 401) return "token_invalid";
+    if (error.status === 403) return "booking_not_permitted";
+    return `provider_${error.status}`;
+  }
+  if (error instanceof Error && error.message.startsWith("CALENDLY_")) return error.message.slice(9).toLowerCase();
+  return "unknown";
 }
 
 export type CalendlySlot = { startTime: string; status: string };
 
 type CalendlyIdentity = { resource?: { uri?: string; current_organization?: string } };
-type CalendlyEventType = { uri?: string; name?: string; active?: boolean; duration?: number; locations?: Array<{ kind?: string }> };
+type CalendlyLocation = { kind?: string; location?: string };
+type CalendlyEventType = { uri?: string; name?: string; active?: boolean; duration?: number; locations?: CalendlyLocation[] };
 
 async function calendlyIdentity() { return calendlyFetch("/users/me") as Promise<CalendlyIdentity>; }
 
@@ -39,7 +60,12 @@ export async function calendlyAvailableTimes(startTime: string, endTime: string)
 
 export async function scheduleCalendlyInvitee(input: { startTime: string; email: string; name: string; timezone: string }) {
   const eventTypeUri = await resolveCalendlyEventTypeUri();
-  const data = await calendlyFetch("/invitees", { method: "POST", body: JSON.stringify({ event_type: eventTypeUri, start_time: input.startTime, invitee: { email: input.email, name: input.name || input.email, timezone: input.timezone } }) }) as {
+  const eventType = await calendlyFetch(eventTypeUri) as { resource?: CalendlyEventType };
+  const locations = (eventType.resource?.locations || []).filter((location) => location.kind);
+  const automaticLocation = locations.find((location) => /_conference$/.test(location.kind || "")) || (locations.length === 1 && !["ask_invitee", "outbound_call"].includes(locations[0].kind || "") ? locations[0] : null);
+  if (locations.length && !automaticLocation?.kind) throw new Error("CALENDLY_LOCATION_INPUT_REQUIRED");
+  const location = automaticLocation?.kind ? { kind: automaticLocation.kind, ...(automaticLocation.location ? { location: automaticLocation.location } : {}) } : undefined;
+  const data = await calendlyFetch("/invitees", { method: "POST", body: JSON.stringify({ event_type: eventTypeUri, start_time: input.startTime, invitee: { email: input.email, name: input.name || input.email, timezone: input.timezone }, ...(location ? { location } : {}) }) }) as {
     resource?: { uri?: string; cancel_url?: string; reschedule_url?: string; event?: string; status?: string };
   };
   if (!data.resource?.uri || !data.resource.event) throw new Error("CALENDLY_INVALID_BOOKING_RESPONSE");

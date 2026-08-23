@@ -1,6 +1,6 @@
 import { appointmentEmail, sendPortalEmail } from "@/app/portal/email";
 import { audit, json, portalEnv, randomId, requireSession } from "@/app/portal/server";
-import { scheduleCalendlyInvitee } from "@/app/portal/calendly";
+import { calendlyErrorCode, scheduleCalendlyInvitee } from "@/app/portal/calendly";
 
 type Appointment = { id: string; publicId: string; status: string; requestedStart: number; durationMinutes: number; timezone: string; applicantNote: string; confirmedStart: number | null; meetingUrl: string | null; adminNote: string; provider: string; cancelUrl: string | null; rescheduleUrl: string | null; completedAt: number | null; createdAt: number; updatedAt: number };
 
@@ -29,7 +29,11 @@ export async function POST(request: Request) {
   if (useCalendly) {
     const answers = JSON.parse(application.answersJson || "{}") as { fullName?: string };
     try { booking = await scheduleCalendlyInvitee({ startTime: new Date(requestedStart).toISOString(), email: session.user.email, name: answers.fullName || session.user.email, timezone }); }
-    catch { return json({ error: "That live slot is no longer available. Refresh the times and choose another slot." }, 409); }
+    catch (error) {
+      const providerCode = calendlyErrorCode(error);
+      console.error("Calendly booking failed", { providerCode, applicationId: application.id });
+      await audit("appointment_booking_failed", "application", application.id, session.user.id, { publicId: application.publicId, providerCode });
+    }
   }
   const status = booking ? "confirmed" : "requested"; const confirmedStart = booking ? new Date(booking.startTime).getTime() : null;
   if (existing) await portalEnv.DB.prepare("UPDATE appointment_requests SET requested_start=?,duration_minutes=?,timezone=?,applicant_note=?,status=?,confirmed_start=?,meeting_url=?,provider=?,provider_event_uri=?,provider_invitee_uri=?,cancel_url=?,reschedule_url=?,completed_at=NULL,completion_notification_sent_at=NULL,completion_notification_attempts=0,updated_at=? WHERE id=?").bind(requestedStart, durationMinutes, timezone, note, status, confirmedStart, booking?.meetingUrl || null, booking ? "calendly" : "manual", booking?.eventUri || null, booking?.inviteeUri || null, booking?.cancelUrl || null, booking?.rescheduleUrl || null, now, appointmentId).run();
@@ -38,5 +42,5 @@ export async function POST(request: Request) {
   const when = new Date(confirmedStart || requestedStart).toISOString(); const applicantMessage = appointmentEmail(application.publicId, booking ? "Your Migrz assessment call is confirmed" : "Your Migrz call request was received", booking ? `Confirmed time: ${when}. Duration: ${durationMinutes} minutes. Your portal will show the join link as soon as the meeting provider makes it available.` : `Requested time: ${when}. Duration: ${durationMinutes} minutes. Migrz will confirm the final time in your portal and by email.`);
   try { await sendPortalEmail({ token: portalEnv.ZEPTOMAIL_TOKEN, from: portalEnv.ZEPTOMAIL_FROM, fromName: portalEnv.ZEPTOMAIL_FROM_NAME }, session.user.email, applicantMessage.subject, applicantMessage.text, applicantMessage.html); } catch { /* The saved request remains authoritative. */ }
   try { const adminMessage = appointmentEmail(application.publicId, "New assessment call request", `${session.user.email} requested ${when} for ${durationMinutes} minutes (${timezone}).`); await sendPortalEmail({ token: portalEnv.ZEPTOMAIL_TOKEN, from: portalEnv.ZEPTOMAIL_FROM, fromName: portalEnv.ZEPTOMAIL_FROM_NAME }, "control@migrzz.com", adminMessage.subject, adminMessage.text, adminMessage.html); } catch { /* Admin can still see the request in operations. */ }
-  return json({ ok: true, appointment: await current(session.user.id) }, existing ? 200 : 201);
+  return json({ ok: true, appointment: await current(session.user.id), bookingFallback: Boolean(useCalendly && !booking) }, existing ? 200 : 201);
 }
