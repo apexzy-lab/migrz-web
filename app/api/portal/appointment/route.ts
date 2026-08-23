@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const session = await requireSession(request, true); if (session.error || !session.user) return session.error!;
   const application = await portalEnv.DB.prepare("SELECT id,public_id AS publicId,review_status AS reviewStatus,answers_json AS answersJson FROM applications WHERE user_id=? LIMIT 1").bind(session.user.id).first<{ id: string; publicId: string; reviewStatus: string; answersJson: string }>();
   if (!application || application.reviewStatus !== "completed") return json({ error: "Your review must be completed before requesting a call." }, 409);
-  const body = await request.json() as { requestedStart?: unknown; durationMinutes?: unknown; timezone?: unknown; note?: unknown; bookingMode?: unknown };
+  const body = await request.json() as { requestedStart?: unknown; durationMinutes?: unknown; timezone?: unknown; note?: unknown; bookingMode?: unknown; bookingToken?: unknown };
   const requestedStart = Number(body.requestedStart); const durationMinutes = Number(body.durationMinutes); const timezone = typeof body.timezone === "string" ? body.timezone.trim().slice(0, 80) : ""; const note = typeof body.note === "string" ? body.note.trim().slice(0, 1000) : ""; const now = Date.now();
   if (!Number.isInteger(requestedStart) || requestedStart < now + 3600000 || requestedStart > now + 180 * 86400000) return json({ error: "Choose a future call time within the next 180 days." }, 400);
   if (![30, 45, 60].includes(durationMinutes)) return json({ error: "Choose a call length of 30, 45 or 60 minutes." }, 400);
@@ -28,7 +28,8 @@ export async function POST(request: Request) {
   let booking: Awaited<ReturnType<typeof scheduleCalendlyInvitee>> | null = null;
   if (useCalendly) {
     const answers = JSON.parse(application.answersJson || "{}") as { fullName?: string };
-    try { booking = await scheduleCalendlyInvitee({ startTime: new Date(requestedStart).toISOString(), email: session.user.email, name: answers.fullName || session.user.email, timezone }); }
+    const bookingToken = typeof body.bookingToken === "string" ? body.bookingToken : undefined;
+    try { booking = await scheduleCalendlyInvitee({ startTime: new Date(requestedStart).toISOString(), email: session.user.email, name: answers.fullName || session.user.email, timezone, userId: session.user.id, bookingToken }); }
     catch (error) {
       const providerCode = calendlyErrorCode(error);
       console.error("Calendly booking failed", { providerCode, applicationId: application.id });

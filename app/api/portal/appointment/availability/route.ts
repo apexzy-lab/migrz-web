@@ -8,6 +8,6 @@ export async function GET(request: Request) {
   if (!portalEnv.CALENDLY_API_TOKEN) return json({ configured: false, slots: [] });
   const url = new URL(request.url); const start = new Date(url.searchParams.get("start") || Date.now() + 3600000); const end = new Date(url.searchParams.get("end") || Date.now() + 14 * 86400000);
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start || end.getTime() - start.getTime() > 31 * 86400000) return json({ error: "Choose an availability range of 31 days or less." }, 400);
-  try { return json({ configured: true, slots: await calendlyAvailableTimes(start.toISOString(), end.toISOString()) }); }
+  try { return json({ configured: true, slots: await calendlyAvailableTimes(start.toISOString(), end.toISOString(), session.user.id) }); }
   catch { return json({ error: "Live availability is temporarily unavailable. You can still request a preferred time." }, 502); }
 }
