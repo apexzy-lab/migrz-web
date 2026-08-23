@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     if ((recent?.count || 0) >= 5) return json({ error: "Too many codes requested. Wait 10 minutes and try again." }, 429);
     const code = randomCode(); const codeHash = await hmacHex(`${user.id}:${code}`, portalEnv.SESSION_SECRET); const codeId = randomId("otp_");
     await portalEnv.DB.prepare("INSERT INTO login_codes (id,user_id,code_hash,expires_at,attempts,ip_hash,created_at) VALUES (?,?,?,?,?,?,?)").bind(codeId, user.id, codeHash, now + 10 * 60000, 0, await clientIpHash(request), now).run();
-    try { await sendLoginCode(email, code); } catch { await portalEnv.DB.prepare("DELETE FROM login_codes WHERE id=?").bind(codeId).run(); return json({ error: "We could not send the sign-in email. Please try again shortly." }, 503); }
+    try { await sendLoginCode(email, code); } catch (error) { console.error("Portal sign-in email failed", { reason: error instanceof Error ? error.message : "unknown" }); await portalEnv.DB.prepare("DELETE FROM login_codes WHERE id=?").bind(codeId).run(); return json({ error: "We could not send the sign-in email. Please try again shortly." }, 503); }
     await audit("login_code_sent", "user", user.id, user.id, { country, plan: plans[plan].name });
     return json({ ok: true, expiresInSeconds: 600 });
   } catch { return json({ error: "Unable to request a sign-in code." }, 500); }
