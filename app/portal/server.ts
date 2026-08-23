@@ -125,6 +125,20 @@ export async function createNotification(userId: string, type: string, title: st
   return id;
 }
 
+export async function deliverTrackedEmail(input: { userId?: string | null; applicationId?: string | null; category: string; recipient: string; subject: string; text: string; html: string }) {
+  const id = randomId("mail_"); const now = Date.now();
+  await portalEnv.DB.prepare("INSERT INTO email_deliveries (id,user_id,application_id,category,recipient,subject,status,attempts,created_at) VALUES (?,?,?,?,?,?,?,0,?)")
+    .bind(id, input.userId || null, input.applicationId || null, input.category, input.recipient, input.subject, "queued", now).run();
+  try {
+    await sendPortalEmail({ token: portalEnv.ZEPTOMAIL_TOKEN, from: portalEnv.ZEPTOMAIL_FROM, fromName: portalEnv.ZEPTOMAIL_FROM_NAME }, input.recipient, input.subject, input.text, input.html);
+    await portalEnv.DB.prepare("UPDATE email_deliveries SET status='sent',attempts=1,sent_at=? WHERE id=?").bind(Date.now(), id).run();
+    return "sent" as const;
+  } catch (error) {
+    await portalEnv.DB.prepare("UPDATE email_deliveries SET status='failed',attempts=1,last_error=? WHERE id=?").bind(error instanceof Error ? error.message.slice(0, 300) : "DELIVERY_FAILED", id).run();
+    return "queued" as const;
+  }
+}
+
 export type PaymentQuote = { userId: string; plan: PlanId; provider: ProviderId; baseUsdMinor: number; amountMinor: number; currency: "USD" | "NGN"; rate: number | null; source: "Wise" | "Migrz"; quotedAt: number; expiresAt: number };
 
 function quotePayload(value: PaymentQuote) { return btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, ""); }

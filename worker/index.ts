@@ -1,7 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
-import { callCompletedEmail, reviewCompletedEmail, sendPortalEmail } from "../app/portal/email";
+import { appointmentEmail, callCompletedEmail, reviewCompletedEmail, sendPortalEmail, serviceUpdateEmail } from "../app/portal/email";
 
 interface Env {
   ASSETS: Fetcher;
@@ -75,7 +75,7 @@ const worker = {
     return handler.fetch(request, env, ctx);
   },
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(Promise.all([processReviewNotificationQueue(env), processCallCompletionNotificationQueue(env)]));
+    ctx.waitUntil(Promise.all([processReviewNotificationQueue(env), processCallCompletionNotificationQueue(env), processAppointmentReminders(env), processNoShowFollowups(env), processSlaAlerts(env)]));
   },
 };
 
@@ -99,6 +99,36 @@ async function processCallCompletionNotificationQueue(env: Env) {
     try { await sendPortalEmail({ token: env.ZEPTOMAIL_TOKEN, from: env.ZEPTOMAIL_FROM, fromName: env.ZEPTOMAIL_FROM_NAME }, appointment.email, message.subject, message.text, message.html); await env.DB.prepare("UPDATE appointment_requests SET completion_notification_sent_at=?,completion_notification_attempts=completion_notification_attempts+1 WHERE id=? AND completion_notification_sent_at=-1").bind(Date.now(), appointment.id).run(); }
     catch { await env.DB.prepare("UPDATE appointment_requests SET completion_notification_sent_at=NULL,completion_notification_attempts=completion_notification_attempts+1 WHERE id=?").bind(appointment.id).run(); }
   }
+}
+
+async function createWorkerNotification(env: Env, userId: string, type: string, title: string, message: string, actionLabel: string, actionView: string, entityId: string) {
+  await env.DB.prepare("INSERT INTO notifications (id,user_id,type,title,message,action_label,action_view,entity_type,entity_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+    .bind(`ntf_${crypto.randomUUID()}`, userId, type, title, message, actionLabel, actionView, "appointment", entityId, Date.now()).run();
+}
+
+async function processAppointmentReminders(env: Env) {
+  if (!env.ZEPTOMAIL_TOKEN) return; const now = Date.now();
+  const rows = await env.DB.prepare(`SELECT ar.id,ar.public_id AS publicId,ar.user_id AS userId,ar.confirmed_start AS confirmedStart,ar.duration_minutes AS durationMinutes,ar.timezone,ar.meeting_url AS meetingUrl,ar.reminder_24h_sent_at AS reminder24hSentAt,ar.reminder_1h_sent_at AS reminder1hSentAt,u.email FROM appointment_requests ar JOIN users u ON u.id=ar.user_id WHERE ar.status IN ('confirmed','rescheduled') AND ar.confirmed_start>? AND ar.confirmed_start<=? AND (ar.reminder_24h_sent_at IS NULL OR (ar.confirmed_start<=? AND ar.reminder_1h_sent_at IS NULL)) LIMIT 40`).bind(now, now + 25 * 3600000, now + 70 * 60000).all<{ id: string; publicId: string; userId: string; confirmedStart: number; durationMinutes: number; timezone: string; meetingUrl: string | null; reminder24hSentAt: number | null; reminder1hSentAt: number | null; email: string }>();
+  for (const item of rows.results) {
+    const oneHour = item.confirmedStart <= now + 70 * 60000; const column = oneHour ? "reminder_1h_sent_at" : "reminder_24h_sent_at"; const current = oneHour ? item.reminder1hSentAt : item.reminder24hSentAt; if (current) continue;
+    const claim = await env.DB.prepare(`UPDATE appointment_requests SET ${column}=-1 WHERE id=? AND ${column} IS NULL`).bind(item.id).run(); if (!claim.meta.changes) continue;
+    const when = new Date(item.confirmedStart).toLocaleString("en", { dateStyle: "full", timeStyle: "short", timeZone: item.timezone }); const heading = oneHour ? "Your Migrz call starts in about one hour" : "Your Migrz call is tomorrow"; const detail = `${when} (${item.timezone}) · ${item.durationMinutes} minutes.${item.meetingUrl ? " Your secure portal contains the join link." : ""}`; const email = appointmentEmail(item.publicId, heading, detail);
+    try { await sendPortalEmail({ token: env.ZEPTOMAIL_TOKEN, from: env.ZEPTOMAIL_FROM, fromName: env.ZEPTOMAIL_FROM_NAME }, item.email, email.subject, email.text, email.html); await env.DB.prepare(`UPDATE appointment_requests SET ${column}=? WHERE id=? AND ${column}=-1`).bind(Date.now(), item.id).run(); await createWorkerNotification(env, item.userId, oneHour ? "call_reminder_1h" : "call_reminder_24h", heading, detail, "View call details", "appointment", item.id); }
+    catch { await env.DB.prepare(`UPDATE appointment_requests SET ${column}=NULL WHERE id=?`).bind(item.id).run(); }
+  }
+}
+
+async function processNoShowFollowups(env: Env) {
+  if (!env.ZEPTOMAIL_TOKEN) return; const rows = await env.DB.prepare(`SELECT ar.id,ar.public_id AS publicId,ar.user_id AS userId,u.email FROM appointment_requests ar JOIN users u ON u.id=ar.user_id WHERE ar.status='no_show' AND ar.no_show_followup_sent_at IS NULL LIMIT 20`).all<{ id: string; publicId: string; userId: string; email: string }>();
+  for (const item of rows.results) { const claim = await env.DB.prepare("UPDATE appointment_requests SET no_show_followup_sent_at=-1 WHERE id=? AND no_show_followup_sent_at IS NULL").bind(item.id).run(); if (!claim.meta.changes) continue; const email = serviceUpdateEmail(`Let’s reschedule your Migrz call — ${item.publicId}`, "We missed you at your review call", "Use your secure portal to choose another suitable time. If a technical issue prevented you from joining, send the team a private message.", "Reschedule your call");
+    try { await sendPortalEmail({ token: env.ZEPTOMAIL_TOKEN, from: env.ZEPTOMAIL_FROM, fromName: env.ZEPTOMAIL_FROM_NAME }, item.email, email.subject, email.text, email.html); await env.DB.prepare("UPDATE appointment_requests SET no_show_followup_sent_at=? WHERE id=?").bind(Date.now(), item.id).run(); await createWorkerNotification(env, item.userId, "call_no_show", "Let’s reschedule your review call", "Choose another suitable time or message the Migrz team if you had a technical issue.", "Reschedule call", "appointment", item.id); }
+    catch { await env.DB.prepare("UPDATE appointment_requests SET no_show_followup_sent_at=NULL WHERE id=?").bind(item.id).run(); }
+  }
+}
+
+async function processSlaAlerts(env: Env) {
+  const now = Date.now(); const rows = await env.DB.prepare(`SELECT id,user_id AS userId,public_id AS publicId FROM applications WHERE review_due_at IS NOT NULL AND review_due_at<? AND review_status IN ('submitted','in_review') AND NOT EXISTS (SELECT 1 FROM audit_events ae WHERE ae.entity_id=applications.id AND ae.event='review_sla_overdue_alerted') LIMIT 30`).bind(now).all<{ id: string; userId: string; publicId: string }>();
+  for (const item of rows.results) { await env.DB.batch([env.DB.prepare("INSERT INTO audit_events (id,event,actor_user_id,entity_type,entity_id,metadata_json,created_at) VALUES (?,?,?,?,?,?,?)").bind(`evt_${crypto.randomUUID()}`, "review_sla_overdue_alerted", null, "application", item.id, JSON.stringify({ publicId: item.publicId }), now), env.DB.prepare("INSERT INTO notifications (id,user_id,type,title,message,action_label,action_view,entity_type,entity_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)").bind(`ntf_${crypto.randomUUID()}`, item.userId, "review_delay", "Your assessment review is taking longer than targeted", "Your record remains active with the Migrz team. We will update you as soon as the review is ready.", "View status", "home", "application", item.id, now)]); }
 }
 
 export default worker;

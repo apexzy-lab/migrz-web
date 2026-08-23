@@ -38,6 +38,9 @@ export const applications = sqliteTable("applications", {
   publicId: text("public_id"), reviewStatus: text("review_status").notNull().default("draft"), assignedAdminId: text("assigned_admin_id"),
   currentSection: integer("current_section").notNull().default(1), answersJson: text("answers_json").notNull().default("{}"),
   createdAt: integer("created_at").notNull(), updatedAt: integer("updated_at").notNull(), submittedAt: integer("submitted_at"), adminUpdatedAt: integer("admin_updated_at"),
+  reviewDueAt: integer("review_due_at"), reportPublishedAt: integer("report_published_at"),
+  casevaultStatus: text("casevault_status").notNull().default("not_ready"), casevaultReference: text("casevault_reference"),
+  retentionUntil: integer("retention_until"),
 }, (table) => [uniqueIndex("idx_applications_user").on(table.userId), uniqueIndex("idx_applications_public_id").on(table.publicId), index("idx_applications_status").on(table.status), index("idx_applications_review_status").on(table.reviewStatus)]);
 
 export const admins = sqliteTable("admins", {
@@ -77,5 +80,27 @@ export const appointmentRequests = sqliteTable("appointment_requests", {
   provider: text("provider").notNull().default("manual"), providerEventUri: text("provider_event_uri"), providerInviteeUri: text("provider_invitee_uri"),
   cancelUrl: text("cancel_url"), rescheduleUrl: text("reschedule_url"), completedAt: integer("completed_at"),
   completionNotificationSentAt: integer("completion_notification_sent_at"), completionNotificationAttempts: integer("completion_notification_attempts").notNull().default(0),
+  reminder24hSentAt: integer("reminder_24h_sent_at"), reminder1hSentAt: integer("reminder_1h_sent_at"), noShowFollowupSentAt: integer("no_show_followup_sent_at"),
   createdAt: integer("created_at").notNull(), updatedAt: integer("updated_at").notNull(),
 }, (table) => [uniqueIndex("idx_appointment_application").on(table.applicationId), uniqueIndex("idx_appointment_public_id").on(table.publicId), index("idx_appointment_status_start").on(table.status, table.requestedStart)]);
+
+export const serviceMessages = sqliteTable("service_messages", {
+  id: text("id").primaryKey(), applicationId: text("application_id").notNull(), userId: text("user_id").notNull(),
+  senderUserId: text("sender_user_id").notNull(), senderRole: text("sender_role").notNull(), kind: text("kind").notNull().default("message"),
+  subject: text("subject").notNull().default(""), body: text("body").notNull(), status: text("status").notNull().default("open"),
+  dueAt: integer("due_at"), resolvedAt: integer("resolved_at"), readByApplicantAt: integer("read_by_applicant_at"), readByAdminAt: integer("read_by_admin_at"),
+  createdAt: integer("created_at").notNull(), updatedAt: integer("updated_at").notNull(),
+}, (table) => [index("idx_service_messages_application_created").on(table.applicationId, table.createdAt), index("idx_service_messages_user_status").on(table.userId, table.status)]);
+
+export const assessmentReports = sqliteTable("assessment_reports", {
+  id: text("id").primaryKey(), applicationId: text("application_id").notNull(), userId: text("user_id").notNull(),
+  version: integer("version").notNull().default(1), r2Key: text("r2_key").notNull(), fileName: text("file_name").notNull(),
+  contentType: text("content_type").notNull(), size: integer("size").notNull(), status: text("status").notNull().default("draft"),
+  summary: text("summary").notNull().default(""), createdBy: text("created_by").notNull(), createdAt: integer("created_at").notNull(), publishedAt: integer("published_at"),
+}, (table) => [uniqueIndex("idx_assessment_reports_r2_key").on(table.r2Key), index("idx_assessment_reports_application_status").on(table.applicationId, table.status)]);
+
+export const emailDeliveries = sqliteTable("email_deliveries", {
+  id: text("id").primaryKey(), userId: text("user_id"), applicationId: text("application_id"), category: text("category").notNull(),
+  recipient: text("recipient").notNull(), subject: text("subject").notNull(), status: text("status").notNull().default("queued"),
+  attempts: integer("attempts").notNull().default(0), lastError: text("last_error"), createdAt: integer("created_at").notNull(), sentAt: integer("sent_at"),
+}, (table) => [index("idx_email_deliveries_status_created").on(table.status, table.createdAt), index("idx_email_deliveries_application").on(table.applicationId, table.createdAt)]);

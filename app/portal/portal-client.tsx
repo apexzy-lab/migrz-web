@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { supportedDestinations } from "@/app/portal/options";
 
-type View = "home" | "assessment" | "documents" | "payment" | "appointment" | "notifications" | "help";
+type View = "home" | "assessment" | "documents" | "inbox" | "report" | "payment" | "appointment" | "notifications" | "help";
 
 const navItems: { id: View; label: string; symbol: string }[] = [
   { id: "home", label: "Home", symbol: "H" },
   { id: "assessment", label: "My assessment", symbol: "A" },
   { id: "documents", label: "Documents", symbol: "D" },
+  { id: "inbox", label: "Messages", symbol: "M" },
+  { id: "report", label: "My report", symbol: "R" },
   { id: "payment", label: "Payment", symbol: "P" },
   { id: "help", label: "Help", symbol: "?" },
 ];
@@ -26,7 +28,7 @@ const steps = [
 function Arrow() { return <span aria-hidden="true">→</span>; }
 
 type PortalSession = { loaded: boolean; authenticated: boolean; user: null | { email: string; countryResidence: string; preferredPlan: "standard" | "accelerated"; paid: boolean; paidPlan: "standard" | "accelerated" | null; admin: boolean }; integrations: { email: boolean; paystack: boolean; paypal: boolean; wise: boolean } };
-type PortalApplicationSummary = { status?: string; reviewStatus?: string; publicId?: string; currentSection?: number; submittedAt?: number | null; answers?: Partial<AssessmentAnswers> };
+type PortalApplicationSummary = { status?: string; reviewStatus?: string; publicId?: string; currentSection?: number; submittedAt?: number | null; reviewDueAt?: number | null; reportPublishedAt?: number | null; casevaultStatus?: string; answers?: Partial<AssessmentAnswers> };
 type ApplicationState = { loaded: boolean; error: boolean; application: PortalApplicationSummary | null };
 
 export function PortalClient() {
@@ -114,6 +116,8 @@ function PaidPortal({ user, onSignOut }: { user: { email: string; paidPlan: "sta
         {view === "home" && <Dashboard state={applicationState} onRefresh={refreshApplication} onContinue={() => selectView("assessment")} onBookCall={() => selectView("appointment")} onHelp={() => selectView("help")} />}
         {view === "assessment" && <Assessment onApplicationChanged={refreshApplication} onBookCall={() => selectView("appointment")} />}
         {view === "documents" && <Documents />}
+        {view === "inbox" && <OperationsCenter initialTab="messages" onNavigate={selectView} />}
+        {view === "report" && <OperationsCenter initialTab="report" onNavigate={selectView} />}
         {view === "payment" && <Payment />}
         {view === "appointment" && <Appointment reviewComplete={reviewComplete} applicationPublicId={applicationState.application?.publicId || ""} onViewNotifications={() => selectView("notifications")} />}
         {view === "notifications" && <NotificationCenter onNavigate={selectView} />}
@@ -174,7 +178,7 @@ function NotificationCenter({ onNavigate }: { onNavigate: (view: View) => void }
   // The initial private-notification read resolves into this view's client state.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
-  const open = async (item: PortalNotification) => { if (!item.readAt) await fetch("/api/portal/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: item.id }) }); if (item.actionView && ["home","assessment","documents","payment","appointment","help"].includes(item.actionView)) onNavigate(item.actionView as View); else void load(); };
+  const open = async (item: PortalNotification) => { if (!item.readAt) await fetch("/api/portal/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: item.id }) }); if (item.actionView && ["home","assessment","documents","inbox","report","payment","appointment","help"].includes(item.actionView)) onNavigate(item.actionView as View); else void load(); };
   return <div className="portal-subpage portal-notifications"><header><span className="portal-eyebrow">Updates from Migrz</span><h1>Your notifications.</h1><p>Service updates, call milestones and next actions remain tied to your secure account.</p></header>{items.length ? <section>{items.map((item) => <article key={item.id} className={item.readAt ? "" : "is-unread"}><span className="portal-notification-mark" aria-hidden="true">{item.type === "call_completed" ? "✓" : "•"}</span><div><small>{new Date(item.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</small><h2>{item.title}</h2><p>{item.message}</p>{item.actionLabel && <button onClick={() => void open(item)}>{item.actionLabel} <Arrow /></button>}</div></article>)}</section> : <div className="portal-appointment-lock"><p>{message}</p></div>}</div>;
 }
 
@@ -272,6 +276,21 @@ function Documents() {
 
 function Payment() {
   return <div className="portal-subpage"><header><span className="portal-eyebrow">Payment</span><h1>Your assessment access is active.</h1><p>Your payment was verified before this workspace opened.</p></header><section className="portal-payment-lock"><span aria-hidden="true">✓</span><div><strong>Payment verified</strong><p>Your receipt remains with the payment provider. Migrz has unlocked this account for one professional pathway assessment.</p></div><button disabled>Paid</button></section></div>;
+}
+
+type ServiceMessage = { id: string; senderRole: "admin" | "applicant"; kind: string; subject: string; body: string; status: string; dueAt: number | null; resolvedAt: number | null; createdAt: number };
+type PublishedReport = { id: string; version: number; fileName: string; size: number; summary: string; publishedAt: number };
+function OperationsCenter({ initialTab, onNavigate }: { initialTab: "messages" | "report"; onNavigate: (view: View) => void }) {
+  const [tab, setTab] = useState(initialTab); const [messages, setMessages] = useState<ServiceMessage[]>([]); const [report, setReport] = useState<PublishedReport | null>(null); const [application, setApplication] = useState<{ publicId: string; reviewStatus: string; reviewDueAt: number | null; casevaultStatus: string; casevaultReference: string | null; retentionUntil: number | null } | null>(null); const [body, setBody] = useState(""); const [busy, setBusy] = useState(false); const [message, setMessage] = useState("Loading your secure workspace…");
+  const load = useCallback(async () => { const response = await fetch("/api/portal/operations", { cache: "no-store" }); const data = await response.json() as { application?: typeof application; messages?: ServiceMessage[]; report?: PublishedReport | null; error?: string }; if (!response.ok) return setMessage(data.error || "Unable to load updates."); setApplication(data.application || null); setMessages(data.messages || []); setReport(data.report || null); setMessage(""); }, []);
+  // The initial private operations read resolves into this view's client state.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
+  const send = async (replyTo?: string) => { if (!body.trim()) return; setBusy(true); const response = await fetch("/api/portal/operations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body, replyTo, subject: replyTo ? "Information supplied" : "Question from applicant" }) }); const data = await response.json() as { error?: string }; setBusy(false); if (!response.ok) return setMessage(data.error || "Unable to send your message."); setBody(""); setMessage("Message sent securely to Migrz."); await load(); };
+  const openRequest = [...messages].reverse().find((item) => item.kind === "information_request" && item.status === "open");
+  // Download links intentionally request authenticated API responses.
+  // eslint-disable-next-line @next/next/no-html-link-for-pages
+  return <div className="portal-subpage portal-operations"><header><span className="portal-eyebrow">Submission {application?.publicId || "workspace"}</span><h1>{tab === "report" ? "Your written assessment." : "Private messages."}</h1><p>{tab === "report" ? "Download the latest published report and keep track of the transition into case operations." : "Ask questions, respond to information requests, and keep every decision tied to your assessment."}</p></header><div className="portal-operations-tabs"><button className={tab === "messages" ? "is-active" : ""} onClick={() => setTab("messages")}>Messages</button><button className={tab === "report" ? "is-active" : ""} onClick={() => setTab("report")}>Written report</button><a href="/api/portal/export">Download my data</a></div>{tab === "messages" ? <div className="portal-inbox-layout"><section className="portal-message-thread">{messages.length ? messages.map((item) => <article key={item.id} className={`is-${item.senderRole} is-${item.kind}`}><small>{item.senderRole === "admin" ? "Migrz team" : "You"} · {new Date(item.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</small><h2>{item.subject}</h2><p>{item.body}</p>{item.kind === "information_request" && <span>{item.status === "open" ? `Response requested${item.dueAt ? ` by ${new Date(item.dueAt).toLocaleDateString()}` : ""}` : "Response received"}</span>}</article>) : <div className="portal-empty-conversation"><strong>No messages yet.</strong><p>Use this space whenever you need the Migrz team to clarify an assessment or document request.</p></div>}</section><aside className="portal-compose"><span className="portal-eyebrow">{openRequest ? "Respond to request" : "New secure message"}</span><textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder={openRequest ? "Provide the requested information and mention any new document you uploaded…" : "Write your question for the Migrz team…"} maxLength={5000} /><button className="portal-primary" disabled={busy || !body.trim()} onClick={() => void send(openRequest?.id)}>{busy ? "Sending…" : openRequest ? "Send response" : "Send message"} <Arrow /></button><small role="status">{message}</small></aside></div> : <section className="portal-report-card">{report ? <><div className="portal-report-icon">PDF</div><div><span>Published {new Date(report.publishedAt).toLocaleDateString()} · Version {report.version}</span><h2>{report.fileName}</h2><p>{report.summary || "Your professional pathway assessment is ready for secure download."}</p><a className="portal-primary" href={`/api/portal/report?id=${encodeURIComponent(report.id)}`}>Download written report <Arrow /></a></div></> : <><div className="portal-report-icon is-waiting">R</div><div><span>{application?.reviewStatus === "needs_information" ? "Action required" : "Professional review"}</span><h2>{application?.reviewStatus === "needs_information" ? "Migrz needs more information before completing the report." : "Your report is being prepared."}</h2><p>{application?.reviewDueAt ? `Current service target: ${new Date(application.reviewDueAt).toLocaleString([], { dateStyle: "full", timeStyle: "short" })}.` : "The publication date will appear here when the review is underway."}</p>{application?.reviewStatus === "needs_information" && <button className="portal-primary" onClick={() => { setTab("messages"); onNavigate("inbox"); }}>Respond to Migrz <Arrow /></button>}</div></>}<footer><strong>CaseVault handoff</strong><span>{application?.casevaultStatus === "handed_off" ? `Transferred · ${application.casevaultReference}` : "Begins only if you engage Migrz for full application support."}</span></footer></section>}</div>;
 }
 
 void AssessmentPreview; void DocumentsPreview; void PaymentPreview;

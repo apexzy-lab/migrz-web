@@ -50,4 +50,13 @@ export function callCompletedEmail(applicationPublicId: string, appointmentPubli
   };
 }
 
+export function serviceUpdateEmail(subject: string, heading: string, detail: string, action = "Open your secure portal") {
+  const portalUrl = "https://apply.migrzz.com/";
+  return {
+    subject,
+    text: `${heading}\n\n${detail}\n\n${action}: ${portalUrl}\n\nMigrz`,
+    html: `<div style="font-family:Arial,sans-serif;color:#172333;max-width:600px;margin:auto"><h1 style="color:#10233f">MIGRZ</h1><h2>${escapeHtml(heading)}</h2><p>${escapeHtml(detail)}</p><p><a href="${portalUrl}" style="display:inline-block;padding:13px 18px;background:#10233f;color:#fff;text-decoration:none;border-radius:6px">${escapeHtml(action)}</a></p><p style="color:#66788c;font-size:12px">This is a private service update about your Migrz assessment.</p></div>`,
+  };
+}
+
 function escapeHtml(value: string) { return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] || character); }
