@@ -7,6 +7,8 @@ import { SITE_URL } from "./site-data";
 import { JsonLd, siteGraph } from "./structured-data";
 import { AnalyticsConsent } from "./analytics-consent";
 import "./globals.css";
+import "./portal-enhancements.css";
+import "flag-icons/css/flag-icons.min.css";
 
 const sans=Geist({variable:"--font-sans",subsets:["latin"]});
 const mono=Geist_Mono({variable:"--font-mono",subsets:["latin"]});

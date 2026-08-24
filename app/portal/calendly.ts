@@ -154,6 +154,19 @@ export async function ensureCalendlyWebhook() {
   webhookReadyUntil = Date.now() + 6 * 60 * 60 * 1000;
 }
 
+export async function findCalendlyBookingForEmail(email: string, earliestStart: number) {
+  const identity = await calendlyIdentity(); const user = identity.resource?.uri; if (!user) throw new Error("CALENDLY_USER_UNAVAILABLE");
+  const params = new URLSearchParams({ user, status: "active", min_start_time: new Date(Math.max(Date.now() - 7 * 86400000, earliestStart - 7 * 86400000)).toISOString(), count: "100" });
+  const data = await calendlyFetch(`/scheduled_events?${params}`) as { collection?: Array<{ uri?: string; start_time?: string; end_time?: string; location?: { join_url?: string; location?: string } }> };
+  for (const event of data.collection || []) {
+    if (!event.uri || !event.start_time) continue;
+    const invitees = await calendlyFetch(`${event.uri}/invitees?count=100`) as { collection?: Array<{ uri?: string; email?: string; status?: string; cancel_url?: string; reschedule_url?: string }> };
+    const invitee = (invitees.collection || []).find((item) => item.status !== "canceled" && item.email?.toLowerCase() === email.toLowerCase());
+    if (invitee?.uri) return { inviteeUri: invitee.uri, eventUri: event.uri, startTime: event.start_time, cancelUrl: invitee.cancel_url || null, rescheduleUrl: invitee.reschedule_url || null, meetingUrl: event.location?.join_url || (event.location?.location?.startsWith("https://") ? event.location.location : null) };
+  }
+  return null;
+}
+
 export function calendlyWebhookSignatureIsValid(rawBody: string, signatureHeader: string) {
   const key = portalEnv.CALENDLY_WEBHOOK_SIGNING_KEY || "";
   if (!key) return Promise.resolve(false);

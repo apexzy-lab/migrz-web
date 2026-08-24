@@ -9,16 +9,20 @@ async function findApplication(publicId: string) {
 
 export async function GET(request: Request) {
   const session = await requireAdmin(request); if (session.error || !session.user) return session.error!; const publicId = new URL(request.url).searchParams.get("id") || ""; const application = await findApplication(publicId); if (!application) return json({ error: "Application not found" }, 404);
-  const [notes, documents, payments, messages, reports, emails] = await Promise.all([
+  const [notes, documents, payments, messages, reports, emails, informationItems, structuredReports, tags, tasks] = await Promise.all([
     portalEnv.DB.prepare(`SELECT n.id,n.note,n.created_at AS createdAt,u.email AS authorEmail FROM application_notes n JOIN users u ON u.id=n.admin_user_id WHERE n.application_id=? ORDER BY n.created_at DESC`).bind(application.id).all(),
     portalEnv.DB.prepare(`SELECT id,file_name AS fileName,content_type AS contentType,size,status,created_at AS createdAt FROM documents WHERE application_id=? AND status!='deleted' ORDER BY created_at DESC`).bind(application.id).all(),
     portalEnv.DB.prepare(`SELECT id,plan,provider,amount_minor AS amountMinor,currency,status,provider_reference AS providerReference,created_at AS createdAt,paid_at AS paidAt FROM payments WHERE user_id=(SELECT user_id FROM applications WHERE id=?) ORDER BY created_at DESC`).bind(application.id).all(),
     portalEnv.DB.prepare(`SELECT id,sender_role AS senderRole,kind,subject,body,status,due_at AS dueAt,resolved_at AS resolvedAt,created_at AS createdAt FROM service_messages WHERE application_id=? ORDER BY created_at DESC`).bind(application.id).all(),
     portalEnv.DB.prepare(`SELECT id,version,file_name AS fileName,size,status,summary,created_at AS createdAt,published_at AS publishedAt FROM assessment_reports WHERE application_id=? ORDER BY version DESC`).bind(application.id).all(),
     portalEnv.DB.prepare(`SELECT id,category,recipient,subject,status,attempts,last_error AS lastError,created_at AS createdAt,sent_at AS sentAt FROM email_deliveries WHERE application_id=? ORDER BY created_at DESC LIMIT 50`).bind(application.id).all(),
+    portalEnv.DB.prepare(`SELECT id,message_id AS messageId,label,response_type AS responseType,required,status,response_text AS responseText,responded_at AS respondedAt,created_at AS createdAt FROM information_request_items WHERE application_id=? ORDER BY created_at`).bind(application.id).all(),
+    portalEnv.DB.prepare(`SELECT id,version,title,executive_summary AS executiveSummary,pathways_json AS pathwaysJson,evidence_gaps_json AS evidenceGapsJson,next_steps_json AS nextStepsJson,status,created_at AS createdAt,updated_at AS updatedAt,published_at AS publishedAt FROM structured_reports WHERE application_id=? ORDER BY version DESC`).bind(application.id).all(),
+    portalEnv.DB.prepare(`SELECT tag FROM application_tags WHERE application_id=? ORDER BY tag`).bind(application.id).all(),
+    portalEnv.DB.prepare(`SELECT id,title,description,priority,status,due_at AS dueAt,completed_at AS completedAt FROM admin_tasks WHERE application_id=? ORDER BY created_at DESC`).bind(application.id).all(),
   ]);
   await portalEnv.DB.prepare("UPDATE service_messages SET read_by_admin_at=coalesce(read_by_admin_at,?) WHERE application_id=? AND sender_role='applicant'").bind(Date.now(), application.id).run();
-  return json({ application: { ...application, answers: JSON.parse(application.answersJson || "{}"), answersJson: undefined }, notes: notes.results, documents: documents.results, payments: payments.results, messages: messages.results, reports: reports.results, emails: emails.results });
+  return json({ application: { ...application, answers: JSON.parse(application.answersJson || "{}"), answersJson: undefined }, notes: notes.results, documents: documents.results, payments: payments.results, messages: messages.results, reports: reports.results, emails: emails.results, informationItems: informationItems.results, structuredReports: structuredReports.results.map((item) => ({ ...item, pathways: JSON.parse(String(item.pathwaysJson || "[]")), evidenceGaps: JSON.parse(String(item.evidenceGapsJson || "[]")), nextSteps: JSON.parse(String(item.nextStepsJson || "[]")), pathwaysJson: undefined, evidenceGapsJson: undefined, nextStepsJson: undefined })), tags: tags.results, tasks: tasks.results });
 }
 
 export async function PATCH(request: Request) {

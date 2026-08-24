@@ -1,8 +1,10 @@
 import { env } from "cloudflare:workers";
 import { sendPortalEmail } from "@/app/portal/email";
+import { paypalSupportsResidence } from "@/app/portal/countries";
 
 export type PlanId = "standard" | "accelerated";
 export type ProviderId = "paystack" | "paypal";
+export type PaymentRoute = ProviderId | "unsupported";
 
 type PortalEnv = {
   DB: D1Database;
@@ -43,7 +45,7 @@ export function normalizeCountry(value: unknown) {
   const country = typeof value === "string" ? value.trim().toUpperCase() : "";
   return /^[A-Z]{2}$/.test(country) ? country : "";
 }
-export function providerForCountry(country: string): ProviderId { return country === "NG" ? "paystack" : "paypal"; }
+export function providerForCountry(country: string): PaymentRoute { return country === "NG" ? "paystack" : paypalSupportsResidence(country) ? "paypal" : "unsupported"; }
 
 function bytesToHex(bytes: Uint8Array) { return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join(""); }
 export function randomId(prefix = "") { const bytes = crypto.getRandomValues(new Uint8Array(18)); return `${prefix}${bytesToHex(bytes)}`; }
@@ -93,6 +95,16 @@ export async function requireAdmin(request: Request) {
   return { error: null, user };
 }
 
+export async function adminMembership(userId: string) {
+  return portalEnv.DB.prepare("SELECT id,role,permissions_json AS permissionsJson,status FROM admins WHERE user_id=? AND status='active' LIMIT 1").bind(userId).first<{ id: string; role: string; permissionsJson: string; status: string }>();
+}
+
+export async function requireAdminRole(request: Request, allowed: string[]) {
+  const session = await requireAdmin(request); if (session.error || !session.user) return { ...session, membership: null };
+  const membership = await adminMembership(session.user.id); if (!membership || (!allowed.includes(membership.role) && membership.role !== "superadmin")) return { error: json({ error: "This administrator role cannot perform that action." }, 403), user: null, membership: null };
+  return { error: null, user: session.user, membership };
+}
+
 export async function createSession(userId: string) {
   const token = randomId("ses_"); const tokenHash = await sha256(token); const now = Date.now();
   await portalEnv.DB.prepare("INSERT INTO sessions (id,user_id,token_hash,expires_at,created_at) VALUES (?,?,?,?,?)").bind(randomId("s_"), userId, tokenHash, now + 14 * 86400000, now).run();
@@ -127,14 +139,14 @@ export async function createNotification(userId: string, type: string, title: st
 
 export async function deliverTrackedEmail(input: { userId?: string | null; applicationId?: string | null; category: string; recipient: string; subject: string; text: string; html: string }) {
   const id = randomId("mail_"); const now = Date.now();
-  await portalEnv.DB.prepare("INSERT INTO email_deliveries (id,user_id,application_id,category,recipient,subject,status,attempts,created_at) VALUES (?,?,?,?,?,?,?,0,?)")
-    .bind(id, input.userId || null, input.applicationId || null, input.category, input.recipient, input.subject, "queued", now).run();
+  await portalEnv.DB.prepare("INSERT INTO email_deliveries (id,user_id,application_id,category,recipient,subject,text_body,html_body,status,attempts,created_at) VALUES (?,?,?,?,?,?,?,?,?,0,?)")
+    .bind(id, input.userId || null, input.applicationId || null, input.category, input.recipient, input.subject, input.text, input.html, "queued", now).run();
   try {
     await sendPortalEmail({ token: portalEnv.ZEPTOMAIL_TOKEN, from: portalEnv.ZEPTOMAIL_FROM, fromName: portalEnv.ZEPTOMAIL_FROM_NAME }, input.recipient, input.subject, input.text, input.html);
     await portalEnv.DB.prepare("UPDATE email_deliveries SET status='sent',attempts=1,sent_at=? WHERE id=?").bind(Date.now(), id).run();
     return "sent" as const;
   } catch (error) {
-    await portalEnv.DB.prepare("UPDATE email_deliveries SET status='failed',attempts=1,last_error=? WHERE id=?").bind(error instanceof Error ? error.message.slice(0, 300) : "DELIVERY_FAILED", id).run();
+    await portalEnv.DB.prepare("UPDATE email_deliveries SET status='failed',attempts=1,last_error=?,next_attempt_at=? WHERE id=?").bind(error instanceof Error ? error.message.slice(0, 300) : "DELIVERY_FAILED", now + 5 * 60000, id).run();
     return "queued" as const;
   }
 }

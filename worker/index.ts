@@ -75,7 +75,7 @@ const worker = {
     return handler.fetch(request, env, ctx);
   },
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(Promise.all([processReviewNotificationQueue(env), processCallCompletionNotificationQueue(env), processAppointmentReminders(env), processNoShowFollowups(env), processSlaAlerts(env)]));
+    ctx.waitUntil(Promise.all([processReviewNotificationQueue(env), processCallCompletionNotificationQueue(env), processAppointmentReminders(env), processNoShowFollowups(env), processSlaAlerts(env), processTrackedEmailRetryQueue(env)]));
   },
 };
 
@@ -129,6 +129,16 @@ async function processNoShowFollowups(env: Env) {
 async function processSlaAlerts(env: Env) {
   const now = Date.now(); const rows = await env.DB.prepare(`SELECT id,user_id AS userId,public_id AS publicId FROM applications WHERE review_due_at IS NOT NULL AND review_due_at<? AND review_status IN ('submitted','in_review') AND NOT EXISTS (SELECT 1 FROM audit_events ae WHERE ae.entity_id=applications.id AND ae.event='review_sla_overdue_alerted') LIMIT 30`).bind(now).all<{ id: string; userId: string; publicId: string }>();
   for (const item of rows.results) { await env.DB.batch([env.DB.prepare("INSERT INTO audit_events (id,event,actor_user_id,entity_type,entity_id,metadata_json,created_at) VALUES (?,?,?,?,?,?,?)").bind(`evt_${crypto.randomUUID()}`, "review_sla_overdue_alerted", null, "application", item.id, JSON.stringify({ publicId: item.publicId }), now), env.DB.prepare("INSERT INTO notifications (id,user_id,type,title,message,action_label,action_view,entity_type,entity_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)").bind(`ntf_${crypto.randomUUID()}`, item.userId, "review_delay", "Your assessment review is taking longer than targeted", "Your record remains active with the Migrz team. We will update you as soon as the review is ready.", "View status", "home", "application", item.id, now)]); }
+}
+
+async function processTrackedEmailRetryQueue(env: Env) {
+  if (!env.ZEPTOMAIL_TOKEN) return; const now = Date.now();
+  const rows = await env.DB.prepare("SELECT id,recipient,subject,text_body AS textBody,html_body AS htmlBody,attempts FROM email_deliveries WHERE status='failed' AND text_body IS NOT NULL AND html_body IS NOT NULL AND attempts<6 AND coalesce(next_attempt_at,0)<=? ORDER BY created_at LIMIT 20").bind(now).all<{ id: string; recipient: string; subject: string; textBody: string; htmlBody: string; attempts: number }>();
+  for (const item of rows.results) {
+    const claim = await env.DB.prepare("UPDATE email_deliveries SET status='retrying' WHERE id=? AND status='failed'").bind(item.id).run(); if (!claim.meta.changes) continue;
+    try { await sendPortalEmail({ token: env.ZEPTOMAIL_TOKEN, from: env.ZEPTOMAIL_FROM, fromName: env.ZEPTOMAIL_FROM_NAME }, item.recipient, item.subject, item.textBody, item.htmlBody); await env.DB.prepare("UPDATE email_deliveries SET status='sent',attempts=attempts+1,sent_at=?,last_error=NULL,next_attempt_at=NULL WHERE id=?").bind(Date.now(), item.id).run(); }
+    catch (error) { const attempts = item.attempts + 1; const delay = Math.min(24 * 3600000, 5 * 60000 * 2 ** attempts); await env.DB.prepare("UPDATE email_deliveries SET status='failed',attempts=?,last_error=?,next_attempt_at=? WHERE id=?").bind(attempts, error instanceof Error ? error.message.slice(0, 300) : "DELIVERY_FAILED", Date.now() + delay, item.id).run(); }
+  }
 }
 
 export default worker;

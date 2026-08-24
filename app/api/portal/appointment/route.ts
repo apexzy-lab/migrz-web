@@ -1,6 +1,6 @@
 import { appointmentEmail, sendPortalEmail } from "@/app/portal/email";
-import { audit, json, portalEnv, randomId, requireSession } from "@/app/portal/server";
-import { CalendlyApiError, calendlyErrorCode, ensureCalendlyWebhook, scheduleCalendlyInvitee } from "@/app/portal/calendly";
+import { audit, createNotification, json, portalEnv, randomId, requireSession } from "@/app/portal/server";
+import { CalendlyApiError, calendlyErrorCode, ensureCalendlyWebhook, findCalendlyBookingForEmail, scheduleCalendlyInvitee } from "@/app/portal/calendly";
 
 type Appointment = { id: string; publicId: string; status: string; requestedStart: number; durationMinutes: number; timezone: string; applicantNote: string; confirmedStart: number | null; meetingUrl: string | null; adminNote: string; provider: string; providerBookingUrl: string | null; cancelUrl: string | null; rescheduleUrl: string | null; completedAt: number | null; createdAt: number; updatedAt: number };
 
@@ -49,4 +49,18 @@ export async function POST(request: Request) {
   try { await sendPortalEmail({ token: portalEnv.ZEPTOMAIL_TOKEN, from: portalEnv.ZEPTOMAIL_FROM, fromName: portalEnv.ZEPTOMAIL_FROM_NAME }, session.user.email, applicantMessage.subject, applicantMessage.text, applicantMessage.html); } catch { /* The saved request remains authoritative. */ }
   try { const adminMessage = appointmentEmail(application.publicId, "New assessment call request", `${session.user.email} requested ${when} for ${durationMinutes} minutes (${timezone}).`); await sendPortalEmail({ token: portalEnv.ZEPTOMAIL_TOKEN, from: portalEnv.ZEPTOMAIL_FROM, fromName: portalEnv.ZEPTOMAIL_FROM_NAME }, "control@migrzz.com", adminMessage.subject, adminMessage.text, adminMessage.html); } catch { /* Admin can still see the request in operations. */ }
   return json({ ok: true, appointment: await current(session.user.id), bookingFallback: Boolean(useCalendly && !booking), hostedBooking: Boolean(providerBookingUrl) }, existing ? 200 : 201);
+}
+
+export async function PATCH(request: Request) {
+  const session = await requireSession(request, true); if (session.error || !session.user) return session.error!;
+  const body = await request.json() as { action?: unknown }; if (body.action !== "reconcile_calendly") return json({ error: "Unsupported appointment action." }, 400);
+  const appointment = await current(session.user.id); if (!appointment?.providerBookingUrl) return json({ error: "There is no pending Calendly booking to check." }, 409);
+  try {
+    const booking = await findCalendlyBookingForEmail(session.user.email, appointment.requestedStart); if (!booking) return json({ error: "We could not find a completed Calendly booking yet. Finish the booking, then check again." }, 404);
+    const confirmed = new Date(booking.startTime).getTime(); const now = Date.now();
+    await portalEnv.DB.prepare("UPDATE appointment_requests SET status='confirmed',provider='calendly',confirmed_start=?,meeting_url=?,provider_event_uri=?,provider_invitee_uri=?,provider_booking_url=NULL,cancel_url=?,reschedule_url=?,updated_at=? WHERE id=?").bind(confirmed, booking.meetingUrl, booking.eventUri, booking.inviteeUri, booking.cancelUrl, booking.rescheduleUrl, now, appointment.id).run();
+    await createNotification(session.user.id, "call_confirmed", "Your review call is confirmed", "Your Calendly booking has been matched to your Migrz account.", "View call details", "appointment", "appointment", appointment.id);
+    await audit("calendly_booking_reconciled", "appointment", appointment.id, session.user.id, { publicId: appointment.publicId, confirmedStart: confirmed });
+    return json({ ok: true, appointment: await current(session.user.id) });
+  } catch { return json({ error: "Calendly could not be checked right now. Your Calendly booking remains valid; try this check again shortly." }, 502); }
 }
