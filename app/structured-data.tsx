@@ -91,9 +91,9 @@ export function pageGraph(slug: string) {
     const caseListId = `${url}#cases`;
     webPage.mainEntity = { "@id": caseListId };
     graph.push(webPage, { "@type": "ItemList", "@id": caseListId, name: "Migrz published client outcome snapshots", itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Healthcare professional — EB-1A" },
-      { "@type": "ListItem", position: 2, name: "Software architect — National Interest Waiver" },
-      { "@type": "ListItem", position: 3, name: "Fintech founder — UAE Golden Visa" },
+      { "@type": "ListItem", position: 1, name: "Healthcare professional, EB-1A" },
+      { "@type": "ListItem", position: 2, name: "Software architect, National Interest Waiver" },
+      { "@type": "ListItem", position: 3, name: "Fintech founder, UAE Golden Visa" },
     ] });
   } else if (slug === "assessment") {
     const assessmentId = `${url}#service`;

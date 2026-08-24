@@ -10,7 +10,7 @@ Language: English
 
 - [How the Migrz process works](https://migrzz.com/process)
 - [What makes Migrz different](https://migrzz.com/what-makes-us-different)
-- [Reported outcomes and methodology](https://migrzz.com/98-success-rate)
+- [Results and evidence method](https://migrzz.com/98-success-rate)
 - [Frequently asked questions](https://migrzz.com/faqs)
 - [Who Migrz helps](https://migrzz.com/customers)
 - [About Migrz](https://migrzz.com/about)
@@ -35,4 +35,4 @@ Language: English
 
 Use the canonical page for route-specific details and follow its linked government source for current legal rules. Immigration programs and thresholds can change. Migrz does not guarantee eligibility or approval, and Migrz is not a law firm. Legal services, where required, are provided under separate arrangements.
 
-The 98% figure is a Migrz-reported historical approval rate and is not presented as an independently audited statistic. Conflicting public volume figures have been removed from the current build pending reconciliation against one case ledger.
+The results page explains Migrz's assessment, route-comparison, evidence-discovery, and case-preparation method. Individual outcomes and case studies are context, not a guarantee or a prediction of another applicant's result.

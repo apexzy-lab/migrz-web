@@ -20,7 +20,7 @@ export const metadata:Metadata={
   icons:{icon:"/favicon.png",apple:"/apple-touch-icon.png"},
   applicationName:"Migrz", creator:"Migrz", publisher:"Migrz", category:"Immigration strategy",
   formatDetection:{email:false,address:false,telephone:false},
-  openGraph:{type:"website",siteName:"Migrz",images:[{url:"/og.png",width:1732,height:909,alt:"Migrz — Your work has crossed borders. Your life should too."}]},
+  openGraph:{type:"website",siteName:"Migrz",images:[{url:"/og.png",width:1732,height:909,alt:"Migrz, Your work has crossed borders. Your life should too."}]},
   twitter:{card:"summary_large_image",images:["/og.png"]},
 };
 

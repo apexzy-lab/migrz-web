@@ -40,9 +40,9 @@ const pageSpecific: Record<string, Omit<SeoPage, "keywords"> & { keywords: strin
     schemaType: "WebPage",
   },
   "98-success-rate": {
-    title: "Reported Immigration Case Outcomes",
-    description: "Understand Migrz's reported 98% approval outcome, the screened-case methodology behind it, its limitations, and how careful case selection protects clients.",
-    keywords: ["immigration approval outcomes", "98 percent immigration success rate", "screened immigration cases", "immigration case outcome methodology", "immigration approval rate explained", "immigration case selection standards", "immigration results transparency", "visa approval outcome analysis", "immigration success rate limitations", "evidence based case preparation", "immigration client outcomes", "Migrz success rate"],
+    title: "Immigration Results and Evidence Method",
+    description: "See how Migrz improves route selection, evidence discovery, case preparation, and decision quality before an immigration application is filed.",
+    keywords: ["immigration case preparation results", "evidence based immigration strategy", "immigration route assessment", "immigration evidence discovery", "professional immigration assessment", "immigration case selection standards", "immigration written pathway report", "immigration evidence map", "achievement based immigration strategy", "immigration case preparation method", "immigration client case studies", "Migrz results"],
     schemaType: "WebPage",
   },
   customers: {
@@ -164,7 +164,7 @@ export function pageMetadata(slug: string, absoluteTitle = false): Metadata {
     openGraph: {
       type: "website", url: canonical, siteName: "Migrz", title: socialTitle,
       description: page.description,
-      images: [{ url: `${SITE_URL}/og.png`, width: 1732, height: 909, alt: "Migrz — achievement-based immigration strategy" }],
+      images: [{ url: `${SITE_URL}/og.png`, width: 1732, height: 909, alt: "Migrz, achievement-based immigration strategy" }],
     },
     twitter: { card: "summary_large_image", title: socialTitle, description: page.description, images: [`${SITE_URL}/og.png`] },
   };
