@@ -34,6 +34,15 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
+    // The workers.dev hostname is a deployment endpoint, not a second public
+    // website. Consolidate every crawl and backlink onto the branded domain.
+    if (url.hostname.endsWith(".workers.dev")) {
+      const isPrivateWorkspace = url.pathname === "/portal" || url.pathname.startsWith("/admin") || url.pathname.startsWith("/api/");
+      url.hostname = isPrivateWorkspace ? "apply.migrzz.com" : "migrzz.com";
+      url.protocol = "https:";
+      return Response.redirect(url.toString(), 301);
+    }
+
     if (url.hostname === "apply.migrzz.com" && url.pathname === "/") {
       url.pathname = "/portal";
       request = new Request(url.toString(), request);

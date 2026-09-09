@@ -12,7 +12,7 @@ export const siteGraph = {
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "Organization", "@id": organizationId, name: "Migrz", url: SITE_URL,
+      "@type": "Organization", "@id": organizationId, name: "Migrz", alternateName: "MIGRZ", url: SITE_URL,
       logo: { "@type": "ImageObject", url: `${SITE_URL}/migrz-logo.png` },
       description: "A specialist immigration consulting technology firm focused on achievement-based and high-skill mobility pathways.",
       address: { "@type": "PostalAddress", streetAddress: "2261 Market Street", addressLocality: "San Francisco", addressRegion: "CA", postalCode: "94114", addressCountry: "US" },
@@ -20,7 +20,7 @@ export const siteGraph = {
       knowsAbout: pathways.map((pathway) => pathway.title),
     },
     {
-      "@type": "WebSite", "@id": websiteId, url: `${SITE_URL}/`, name: "Migrz",
+      "@type": "WebSite", "@id": websiteId, url: `${SITE_URL}/`, name: "Migrz", alternateName: "MIGRZ",
       description: "Evidence-led immigration strategy for accomplished professionals.", publisher: { "@id": organizationId }, inLanguage: "en-US",
     },
   ],

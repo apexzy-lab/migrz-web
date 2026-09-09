@@ -58,10 +58,11 @@ fbq('init', '1977570466130181');
 fbq('track', 'PageView');}`;
 
 export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><head>
+  <JsonLd data={siteGraph}/>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-8X3PLHV88L"/>
   <script dangerouslySetInnerHTML={{__html:googleAnalytics}}/>
   <script dangerouslySetInnerHTML={{__html:microsoftClarity}}/>
   <script dangerouslySetInnerHTML={{__html:metaPixel}}/>
 </head><body className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
-  <a className="skip-link" href="#main">Skip to content</a><SiteHeader/><main id="main">{children}</main><SiteFooter/><AnalyticsConsent/><JsonLd data={siteGraph}/>
+  <a className="skip-link" href="#main">Skip to content</a><SiteHeader/><main id="main">{children}</main><SiteFooter/><AnalyticsConsent/>
 </body></html>}

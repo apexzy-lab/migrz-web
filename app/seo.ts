@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { pathways, type Pathway, SITE_URL } from "./site-data";
 
-export const SEO_LAST_MODIFIED = "2026-08-22";
+export const SEO_LAST_MODIFIED = "2026-09-09";
 
 const sharedKeywords = [
   "achievement based immigration",
