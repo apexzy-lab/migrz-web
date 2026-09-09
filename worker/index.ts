@@ -24,6 +24,12 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
+const legacyArticleRedirects: Record<string, string> = {
+  "/eb-1a-without-a-phd": "https://blog.migrzz.com/eb-1a-without-a-phd-success-paths-for-industry-professionals/",
+  "/eb-1a-self-assessment": "https://blog.migrzz.com/eb-1a-self-assessment-the-10-criteria-explained-in-plain-english/",
+  "/how-many-eb-1a-criteria-do-you-really-need-to-meet": "https://blog.migrzz.com/how-many-eb-1a-criteria-do-you-really-need-to-meet-a-detailed-analysis/",
+};
+
 // Image security config. SVG sources with .svg extension auto-skip the
 // optimization endpoint on the client side (served directly, no proxy).
 // To route SVGs through the optimizer (with security headers), set
@@ -60,6 +66,13 @@ const worker = {
     if (url.hostname === "www.migrzz.com") {
       url.hostname = "migrzz.com";
       return Response.redirect(url.toString(), 301);
+    }
+
+    const legacyArticle = legacyArticleRedirects[url.pathname.replace(/\/$/, "")];
+    if (url.hostname === "migrzz.com" && legacyArticle) {
+      const destination = new URL(legacyArticle);
+      destination.search = url.search;
+      return Response.redirect(destination.toString(), 301);
     }
 
     // Preserve the indexed WordPress local-business artifact with its closest

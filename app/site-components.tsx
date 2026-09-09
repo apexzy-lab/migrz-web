@@ -14,6 +14,12 @@ const destinationVisuals: Record<string,{src:string;alt:string}> = {
   "United Arab Emirates": {src:"/destinations/uae.webp",alt:"Dubai cityscape with the Burj Khalifa"},
 };
 
+const featuredInsights = [
+  { category: "Pathways", title: "EB-1A without a PhD", summary: "How industry professionals can document extraordinary ability beyond academic credentials.", href: "https://blog.migrzz.com/eb-1a-without-a-phd-success-paths-for-industry-professionals/" },
+  { category: "Guides", title: "EB-1A self-assessment", summary: "A practical framework for understanding the evidence categories before you file.", href: "https://blog.migrzz.com/eb-1a-self-assessment-the-10-criteria-explained-in-plain-english/" },
+  { category: "Strategy", title: "The immigration priority matrix", summary: "How to compare country, career, tax, timing, and long-term outcomes.", href: "https://blog.migrzz.com/immigration-priority-matrix-matching-your-profile-to-the-right-visa-pathway/" },
+];
+
 export function Logo({ light = true }: { light?: boolean }) {
   return <a className={`brand-logo ${light ? "logo-light" : "logo-dark"}`} href="/" aria-label="Migrz home"><img src="/migrz-logo.png" alt="Migrz" /></a>;
 }
@@ -53,7 +59,7 @@ export function HomePage() {
     <section className="method-section"><div className="method-copy"><span className="eyebrow light">The Migrz method</span><h2>Strategy before paperwork.</h2><p>The right route is not always the obvious one. Migrz compares first, then commits.</p><a href="/process">See the full process <Arrow/></a></div><div className="method-steps">{[["01","Assess","Review your work, recognition, impact, and existing evidence."],["02","Compare","Model credible routes across countries and identify trade-offs."],["03","Build","Create the evidence architecture and prepare the case."],["04","Manage","Coordinate submission, updates, and any response strategy."]].map(x=><article key={x[0]}><span>{x[0]}</span><h3>{x[1]}</h3><p>{x[2]}</p></article>)}</div></section>
     <section className="audience-section"><div><span className="eyebrow">Who Migrz is built for</span><h2>Professionals whose work already moves industries.</h2></div><div className="audience-list">{["Technology and AI leaders","Researchers and academics","Healthcare innovators","Finance professionals","Founders and executives","Engineers and specialists"].map((x,i)=><a href="/customers" key={x}><span>0{i+1}</span>{x}<Arrow/></a>)}</div></section>
     <section className="outcomes"><blockquote>“I was told by two immigration lawyers that I needed more publications. Migrz found eleven pieces of evidence they had completely missed.”</blockquote><div><span>CLIENT STORY</span><b>Dr. Chinwe A. · Healthcare professional · now in Texas</b><p>Her EB-1A petition was approved after Migrz helped reorganize an overlooked professional record into a coherent case.</p><a href="/case-studies">Read the published client outcomes <Arrow/></a></div></section>
-    <section className="insights"><div className="section-head"><div><span className="eyebrow">Immigration intelligence</span><h2>No fluff. Just useful strategy.</h2></div><a href="https://blog.migrzz.com">Visit the Migrz journal <Arrow/></a></div><div className="insight-grid">{[["Pathways","EB-1A without a PhD","How industry professionals can document extraordinary ability beyond academic credentials."],["Guides","EB-1A self-assessment","A practical framework for understanding the evidence categories before you file."],["Strategy","The immigration priority matrix","How to compare country, career, tax, timing, and long-term outcomes."]].map(x=><a href="https://blog.migrzz.com" key={x[1]}><span>{x[0]}</span><h3>{x[1]}</h3><p>{x[2]}</p><b>Read insight <Arrow/></b></a>)}</div></section>
+    <section className="insights"><div className="section-head"><div><span className="eyebrow">Immigration intelligence</span><h2>No fluff. Just useful strategy.</h2></div><a href="https://blog.migrzz.com">Visit the Migrz journal <Arrow/></a></div><div className="insight-grid">{featuredInsights.map(item=><a href={item.href} key={item.title}><span>{item.category}</span><h3>{item.title}</h3><p>{item.summary}</p><b>Read insight <Arrow/></b></a>)}</div></section>
     <CTA/>
   </>;
 }
