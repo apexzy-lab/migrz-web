@@ -14,6 +14,15 @@ const sans=Geist({variable:"--font-sans",subsets:["latin"]});
 const mono=Geist_Mono({variable:"--font-mono",subsets:["latin"]});
 const serif=Newsreader({variable:"--font-serif",subsets:["latin"]});
 
+const consentBootstrap=`window.migrzAnalyticsConsent=(function(){
+  try {
+    var stored=localStorage.getItem('migrz_analytics_consent');
+    if(stored==='accepted'||stored==='declined')return stored;
+  } catch(e) {}
+  var match=document.cookie.match(/(?:^|; )migrz_analytics_consent=(accepted|declined)(?:;|$)/);
+  return match ? match[1] : null;
+})();`;
+
 export const metadata:Metadata={
   metadataBase:new URL(SITE_URL), title:{default:"Migrz | Achievement-Based Immigration Strategy",template:"%s | Migrz"},
   description:"Evidence-led immigration strategy for exceptional professionals.",
@@ -26,7 +35,7 @@ export const metadata:Metadata={
 
 const googleAnalytics=`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
-var migrzConsent = localStorage.getItem('migrz_analytics_consent') === 'accepted' ? 'granted' : 'denied';
+var migrzConsent = window.migrzAnalyticsConsent === 'accepted' ? 'granted' : 'denied';
 gtag('consent', 'default', {
   analytics_storage: migrzConsent,
   ad_storage: migrzConsent,
@@ -40,13 +49,13 @@ gtag('config', 'G-8X3PLHV88L', {
   allow_google_signals: migrzConsent === 'granted'
 });`;
 
-const microsoftClarity=`if(localStorage.getItem('migrz_analytics_consent') === 'accepted'){(function(c,l,a,r,i,t,y){
+const microsoftClarity=`if(window.migrzAnalyticsConsent === 'accepted'){(function(c,l,a,r,i,t,y){
   c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
   t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
   y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 })(window, document, "clarity", "script", "uw607xjcnq");}`;
 
-const metaPixel=`if(localStorage.getItem('migrz_analytics_consent') === 'accepted'){!function(f,b,e,v,n,t,s)
+const metaPixel=`if(window.migrzAnalyticsConsent === 'accepted'){!function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
 if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
@@ -59,6 +68,7 @@ fbq('track', 'PageView');}`;
 
 export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><head>
   <JsonLd data={siteGraph}/>
+  <script dangerouslySetInnerHTML={{__html:consentBootstrap}}/>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-8X3PLHV88L"/>
   <script dangerouslySetInnerHTML={{__html:googleAnalytics}}/>
   <script dangerouslySetInnerHTML={{__html:microsoftClarity}}/>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const CONSENT_KEY = "migrz_analytics_consent";
+const CONSENT_MAX_AGE = 60 * 60 * 24 * 365;
 const TRACKED_PARAMETERS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid"];
 
 declare global {
@@ -30,19 +31,39 @@ function recordAssessmentClick(anchor: HTMLAnchorElement) {
   window.clarity?.("event", "assessment_click");
 }
 
+function storedConsent(): "accepted" | "declined" | null {
+  let stored: string | null = null;
+  try {
+    stored = window.localStorage.getItem(CONSENT_KEY);
+  } catch {
+    // Some privacy modes block localStorage. The first-party cookie below is
+    // the durable fallback, so a saved choice does not become a recurring UI.
+  }
+  if (stored !== "accepted" && stored !== "declined") {
+    stored = document.cookie.split("; ").find((item) => item.startsWith(`${CONSENT_KEY}=`))?.split("=")[1] || null;
+  }
+  return stored === "accepted" || stored === "declined" ? stored : null;
+}
+
+function persistConsent(value: "accepted" | "declined") {
+  try {
+    window.localStorage.setItem(CONSENT_KEY, value);
+  } catch {
+    // The cookie remains available when localStorage is restricted.
+  }
+  document.cookie = `${CONSENT_KEY}=${value}; Max-Age=${CONSENT_MAX_AGE}; Path=/; SameSite=Lax; Secure`;
+}
+
 export function AnalyticsConsent() {
   const [choice, setChoice] = useState<"accepted" | "declined" | null>(null);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(CONSENT_KEY);
-    let frame: number | undefined;
-    if (stored === "accepted" || stored === "declined") {
-      frame = window.requestAnimationFrame(() => {
-        setChoice(stored);
-        setOpen(false);
-      });
-    }
+    const stored = storedConsent();
+    const initialize = window.setTimeout(() => {
+      setChoice(stored);
+      setOpen(stored === null);
+    }, 0);
 
     const onClick = (event: MouseEvent) => {
       const target = event.target as Element | null;
@@ -57,13 +78,13 @@ export function AnalyticsConsent() {
     };
     document.addEventListener("click", onClick, true);
     return () => {
-      if (frame !== undefined) window.cancelAnimationFrame(frame);
+      window.clearTimeout(initialize);
       document.removeEventListener("click", onClick, true);
     };
   }, []);
 
   const save = (value: "accepted" | "declined") => {
-    window.localStorage.setItem(CONSENT_KEY, value);
+    persistConsent(value);
     setChoice(value);
     setOpen(false);
     window.gtag?.("consent", "update", {
