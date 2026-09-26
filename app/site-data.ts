@@ -135,7 +135,7 @@ export const pathways: Pathway[] = [
 ];
 
 export const routeSlugs = [
-  "what-makes-us-different", ...pathways.map((p) => p.slug), "process", "98-success-rate", "case-studies", "customers", "faqs", "about", "team", "assessment", "privacy", "terms", "cookie-policy", "accessibility", "disclaimer"
+  "pathways", "what-makes-us-different", ...pathways.map((p) => p.slug), "process", "results", "case-studies", "customers", "faqs", "contact", "about", "team", "assessment", "privacy", "terms", "cookie-policy", "accessibility", "disclaimer"
 ];
 
 export const faqGroups = [
@@ -150,7 +150,7 @@ export const faqGroups = [
     ["Can Migrz guarantee approval?", "No legitimate professional can guarantee a government decision. Migrz can assess fit, decline weak cases, strengthen presentation, and manage the process, but the deciding authority controls the outcome."],
   ]},
   { title: "Process and timing", items: [
-    ["How long does the assessment take?", "Migrz states that the assessment report is delivered within 48 hours after receiving the required information and evidence."],
+    ["How long does the assessment take?", "The standard assessment targets report delivery within 48 hours after Migrz has received all requested information and evidence. The accelerated option follows the timing shown at checkout."],
     ["Who handles my case?", "Migrz describes a specialist, founder-led model rather than a generalist high-volume service. Your engagement scope should identify the responsible team and any independent legal provider."],
     ["How long will immigration processing take?", "Government processing varies by route, location, evidence, and policy changes. Migrz provides a case-specific timeline but cannot control government processing."],
   ]},

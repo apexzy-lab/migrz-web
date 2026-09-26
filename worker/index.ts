@@ -75,6 +75,13 @@ const worker = {
       return Response.redirect(destination.toString(), 301);
     }
 
+    // The old claim-based URL no longer describes the page. Preserve its
+    // accumulated search equity while establishing the factual Results route.
+    if (url.hostname === "migrzz.com" && url.pathname.replace(/\/$/, "") === "/98-success-rate") {
+      url.pathname = "/results";
+      return Response.redirect(url.toString(), 301);
+    }
+
     // Preserve the indexed WordPress local-business artifact with its closest
     // useful replacement instead of returning a 404 after the cutover.
     if (url.pathname === "/locations.kml") {

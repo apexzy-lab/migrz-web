@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { pathways, type Pathway, SITE_URL } from "./site-data";
 
-export const SEO_LAST_MODIFIED = "2026-09-09";
+export const SEO_LAST_MODIFIED = "2026-09-26";
 
 const sharedKeywords = [
   "achievement based immigration",
@@ -18,7 +18,7 @@ type SeoPage = {
   title: string;
   description: string;
   keywords: string[];
-  schemaType?: "AboutPage" | "CollectionPage" | "FAQPage" | "WebPage";
+  schemaType?: "AboutPage" | "CollectionPage" | "ContactPage" | "FAQPage" | "WebPage";
 };
 
 const pageSpecific: Record<string, Omit<SeoPage, "keywords"> & { keywords: string[] }> = {
@@ -33,17 +33,29 @@ const pageSpecific: Record<string, Omit<SeoPage, "keywords"> & { keywords: strin
     keywords: ["evidence led immigration consulting", "human immigration assessment", "immigration strategy difference", "specialist immigration support", "cross border pathway comparison", "honest immigration assessment", "immigration evidence architecture", "founder led immigration service", "immigration case selection", "career achievement analysis", "professional immigration strategy firm", "Migrz difference"],
     schemaType: "WebPage",
   },
+  pathways: {
+    title: "Immigration Pathways by Country",
+    description: "Compare Migrz immigration pathways across the United States, United Kingdom, Canada, Australia, Germany, and the UAE before choosing a route.",
+    keywords: ["immigration pathways by country", "global immigration pathways", "compare immigration routes", "United States immigration pathways", "United Kingdom talent visas", "Canada skilled immigration routes", "Australia innovation visa", "Germany EU Blue Card", "UAE Golden Visa", "permanent residence comparison", "talent immigration options", "Migrz pathways"],
+    schemaType: "CollectionPage",
+  },
   process: {
     title: "The Migrz Immigration Process",
     description: "Understand the Migrz process from paid professional assessment and pathway comparison through evidence strategy, case preparation, filing, and follow-through.",
     keywords: ["immigration assessment process", "immigration case preparation steps", "immigration evidence review process", "professional pathway assessment", "visa strategy consultation process", "immigration application preparation", "immigration document strategy", "immigration case management", "immigration filing support", "immigration assessment report", "immigration consultation timeline", "Migrz process"],
     schemaType: "WebPage",
   },
-  "98-success-rate": {
+  results: {
     title: "Immigration Results and Evidence Method",
     description: "See how Migrz improves route selection, evidence discovery, case preparation, and decision quality before an immigration application is filed.",
     keywords: ["immigration case preparation results", "evidence based immigration strategy", "immigration route assessment", "immigration evidence discovery", "professional immigration assessment", "immigration case selection standards", "immigration written pathway report", "immigration evidence map", "achievement based immigration strategy", "immigration case preparation method", "immigration client case studies", "Migrz results"],
     schemaType: "WebPage",
+  },
+  contact: {
+    title: "Contact Migrz",
+    description: "Contact Migrz about professional assessments, payment support, an existing application, accessibility, privacy, or a general service question.",
+    keywords: ["contact Migrz", "Migrz customer support", "immigration assessment support", "immigration payment support", "professional assessment questions", "immigration service contact", "Migrz application help", "immigration portal support", "immigration consultation questions", "Migrz email address", "assessment payment assistance", "immigration client support"],
+    schemaType: "ContactPage",
   },
   customers: {
     title: "Who Migrz Helps",

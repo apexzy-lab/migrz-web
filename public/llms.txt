@@ -10,7 +10,9 @@ Language: English
 
 - [How the Migrz process works](https://migrzz.com/process)
 - [What makes Migrz different](https://migrzz.com/what-makes-us-different)
-- [Results and evidence method](https://migrzz.com/98-success-rate)
+- [Complete pathway directory](https://migrzz.com/pathways)
+- [Results and evidence method](https://migrzz.com/results)
+- [Contact and support](https://migrzz.com/contact)
 - [Frequently asked questions](https://migrzz.com/faqs)
 - [Who Migrz helps](https://migrzz.com/customers)
 - [About Migrz](https://migrzz.com/about)

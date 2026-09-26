@@ -16,6 +16,10 @@ export const siteGraph = {
       logo: { "@type": "ImageObject", url: `${SITE_URL}/migrz-logo.png` },
       description: "A specialist immigration consulting technology firm focused on achievement-based and high-skill mobility pathways.",
       address: { "@type": "PostalAddress", streetAddress: "2261 Market Street", addressLocality: "San Francisco", addressRegion: "CA", postalCode: "94114", addressCountry: "US" },
+      contactPoint: [
+        { "@type": "ContactPoint", contactType: "assessment and customer support", email: "comms@migrzz.com", url: `${SITE_URL}/contact`, availableLanguage: "English" },
+        { "@type": "ContactPoint", contactType: "payment support", email: "payments@migrzz.com", url: `${SITE_URL}/contact`, availableLanguage: "English" },
+      ],
       sameAs: ["https://linkedin.com/company/migrz", "https://facebook.com/themigrz/", "https://instagram.com/themigrz", "https://x.com/themigrz"],
       knowsAbout: pathways.map((pathway) => pathway.title),
     },
@@ -26,11 +30,15 @@ export const siteGraph = {
   ],
 };
 
-function breadcrumb(slug: string, name: string) {
+function breadcrumb(slug: string, name: string, isPathway = false) {
   if (!slug) return undefined;
   return {
     "@type": "BreadcrumbList", "@id": `${canonicalUrl(slug)}#breadcrumb`,
-    itemListElement: [
+    itemListElement: isPathway ? [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: "Pathways", item: canonicalUrl("pathways") },
+      { "@type": "ListItem", position: 3, name, item: canonicalUrl(slug) },
+    ] : [
       { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
       { "@type": "ListItem", position: 2, name, item: canonicalUrl(slug) },
     ],
@@ -54,7 +62,7 @@ export function pageGraph(slug: string) {
   const url = canonicalUrl(slug);
   const pathway = pathways.find((item) => item.slug === slug);
   const graph: Record<string, unknown>[] = [];
-  const crumb = breadcrumb(slug, seo.title);
+  const crumb = breadcrumb(slug, seo.title, Boolean(pathway));
   if (crumb) graph.push(crumb);
 
   const webPage: Record<string, unknown> = {
@@ -67,6 +75,14 @@ export function pageGraph(slug: string) {
   if (pathway) {
     webPage.mainEntity = { "@id": `${url}#service` };
     graph.push(webPage, pathwayService(pathway));
+  } else if (slug === "pathways") {
+    const pathwaysId = `${url}#pathways`;
+    webPage.mainEntity = { "@id": pathwaysId };
+    graph.push(webPage, {
+      "@type": "ItemList", "@id": pathwaysId, name: "Immigration pathways by country",
+      numberOfItems: pathways.length,
+      itemListElement: pathways.map((item, index) => ({ "@type": "ListItem", position: index + 1, name: item.title, url: canonicalUrl(item.slug) })),
+    });
   } else if (slug === "faqs") {
     webPage.mainEntity = faqGroups.flatMap((group) => group.items.map(([question]) => ({ "@id": `${url}#${question.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}` })));
     graph.push(webPage, ...faqGroups.flatMap((group) => group.items.map(([question, answer]) => ({
